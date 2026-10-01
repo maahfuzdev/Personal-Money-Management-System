@@ -27,6 +27,16 @@ $jwtBytes = New-Object byte[] 32
 $env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
 ```
 
+If you are using **Command Prompt (CMD)**, generate the key with PowerShell, copy the printed output, then set it in the same CMD window:
+
+```cmd
+powershell -NoProfile -Command "$bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes); [Convert]::ToBase64String($bytes)"
+set "JWT_SECRET=PASTE_THE_PRINTED_KEY_HERE"
+mvnw.cmd spring-boot:run
+```
+
+Replace `PASTE_THE_PRINTED_KEY_HERE` with the Base64 line printed by the first command. Keep this terminal open while the backend runs. A new terminal needs a newly set `JWT_SECRET`.
+
 Set `APP_CORS_ALLOWED_ORIGIN` to the frontend origin when it is not `http://localhost:5173`. Keep the generated signing secret in the same process environment; never commit it or expose it to React.
 
 ## Local URLs
