@@ -1,2 +1,31 @@
-# Personal-Money-Management-System
-A personal money management system for tracking income, expenses, savings, and financial activities.
+# Personal Money Management System
+
+A responsive personal finance app for recording income and expenses, planning budgets, and understanding spending.
+
+## Project layout
+
+```text
+backend/   Java 17 + Spring Boot REST API
+frontend/  React + Vite web application
+docs/      Architecture, setup, API, and deployment documentation
+```
+
+The frontend and backend live in this repository but build and deploy independently. The React app calls the Java API through an environment-configured API URL. MySQL stores application data. Credentials belong in environment variables and must not be committed.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [API contract](docs/api.md)
+- [Development setup](docs/getting-started.md)
+- [Backend setup](backend/README.md)
+- [Frontend setup](frontend/README.md)
+
+## Planned product areas
+
+- Account registration and sign in
+- Income and expense tracking
+- Dashboard summaries and transaction history
+- Budgets, savings goals, and reports
+- Responsive layouts for phones, tablets, and desktop
+
+Features will be delivered in small, documented increments. See the documentation for the current implementation status.

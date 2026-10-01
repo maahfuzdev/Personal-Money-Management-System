@@ -1,0 +1,21 @@
+# Java / Maven
+backend/target/
+*.class
+
+# React / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

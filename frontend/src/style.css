@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+
+:root {
+  font-family: 'DM Sans', sans-serif;
+  color: #17231e;
+  background: #f3f7f4;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  font-weight: 400;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button, input { font: inherit; }
+
+.welcome-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px 24px;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgb(200 231 213 / 60%), transparent 38%),
+    radial-gradient(ellipse at 90% 86%, rgb(234 226 196 / 45%), transparent 35%),
+    #f3f7f4;
+}
+
+.welcome-card {
+  width: min(100%, 680px);
+  padding: clamp(32px, 8vw, 76px);
+  border: 1px solid rgb(255 255 255 / 85%);
+  border-radius: 28px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 28px 80px rgb(31 62 44 / 9%);
+}
+
+.brand-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 15px;
+  background: #1d6847;
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+}
+
+.eyebrow {
+  margin: 48px 0 14px;
+  color: #397a57;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+h1 {
+  max-width: 520px;
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(38px, 8vw, 64px);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: 1.08;
+}
+
+.welcome-copy {
+  max-width: 480px;
+  margin: 20px 0 0;
+  color: #66736b;
+  font-size: clamp(16px, 2.5vw, 18px);
+  line-height: 1.7;
+}
+
+.setup-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin-top: 36px;
+  padding: 12px 15px;
+  border: 1px solid #e4eee7;
+  border-radius: 999px;
+  background: #f7faf8;
+  color: #53645a;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #46a36c;
+  box-shadow: 0 0 0 4px #e5f4ea;
+}
+
+.welcome-footer {
+  position: absolute;
+  bottom: 22px;
+  color: #7d8a81;
+  font-size: 12px;
+}
+
+@media (max-width: 480px) {
+  .welcome-shell { padding-inline: 16px; }
+  .welcome-card { border-radius: 22px; }
+  .eyebrow { margin-top: 38px; font-size: 10px; }
+  .setup-note { border-radius: 14px; line-height: 1.45; }
+}
