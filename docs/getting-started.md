@@ -19,6 +19,16 @@ DB_PASSWORD=your_mysql_password
 
 Set those values in your IDE run configuration or process environment before starting the API. Never place real credentials in a committed file. The backend and frontend READMEs contain their individual run commands.
 
+The authentication API also needs a signing secret. In PowerShell, generate a fresh one for local development:
+
+```powershell
+$jwtBytes = New-Object byte[] 32
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($jwtBytes)
+$env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
+```
+
+Set `APP_CORS_ALLOWED_ORIGIN` to the frontend origin when it is not `http://localhost:5173`. Keep the generated signing secret in the same process environment; never commit it or expose it to React.
+
 ## Local URLs
 
 - React development server: `http://localhost:5173`

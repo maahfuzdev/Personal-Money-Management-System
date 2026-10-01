@@ -30,6 +30,10 @@ The React app will keep pages, shared components, API clients, and styling in se
 - Frontend and backend URLs are configuration, not source-code constants.
 - Passwords and tokens must never be committed.
 
+## Authentication
+
+The API hashes account passwords with Spring Security's PBKDF2 encoder and issues 15-minute HMAC-signed bearer access tokens. The signing key is supplied as `JWT_SECRET` and must contain at least 32 random bytes after Base64 decoding. The React app will keep access tokens in memory and send them in the `Authorization` header. Refresh-token support is a separate follow-up before production use.
+
 ## API conventions
 
 - JSON REST endpoints use `/api/v1/...`.
