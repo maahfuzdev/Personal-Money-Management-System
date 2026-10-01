@@ -6,9 +6,11 @@ Java 17+ and Spring Boot REST API. The backend owns validation, business rules, 
 
 Set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` in the process environment. Local database setup is in [Development setup](../docs/getting-started.md).
 
-## Run
+## Run on Windows
 
-From this directory, run `mvn spring-boot:run` after the backend application and database configuration are in place.
+From this directory, run `.\mvnw.cmd spring-boot:run` after setting the database environment variables. The Maven Wrapper downloads and uses the project Maven version, so a global Maven install is not required.
+
+On macOS or Linux, run `./mvnw spring-boot:run`.
 
 ## API contract
 

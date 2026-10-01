@@ -3,7 +3,7 @@
 ## Requirements
 
 - Java 17 or newer
-- Maven 3.6.3 or newer
+- Maven is not required; the included Maven Wrapper downloads the configured version
 - Node.js 22.12 or newer and npm
 - MySQL 8 or a compatible MySQL server
 
