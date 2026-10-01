@@ -20,12 +20,12 @@ The frontend and backend live in this repository but build and deploy independen
 - [Backend setup](backend/README.md)
 - [Frontend setup](frontend/README.md)
 
-## Planned product areas
+## Product progress
 
-- Account registration and sign in
-- Income and expense tracking
-- Dashboard summaries and transaction history
-- Budgets, savings goals, and reports
-- Responsive layouts for phones, tablets, and desktop
+- [x] Account registration and sign in
+- [ ] Income and expense tracking
+- [ ] Dashboard summaries and transaction history
+- [ ] Budgets, savings goals, and reports
+- [x] Responsive account screens for phones, tablets, and desktop
 
 Features will be delivered in small, documented increments. See the documentation for the current implementation status.

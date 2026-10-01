@@ -2,7 +2,7 @@
 
 ## Base path
 
-All application endpoints will use `/api/v1`. The browser client receives the API origin from `VITE_API_BASE_URL`; the backend port is configurable with `PORT`.
+All application endpoints will use `/api/v1`. The browser client receives the API base URL from `VITE_API_BASE_URL`; the backend port is configurable with `PORT`. The local default is `http://localhost:8080/api/v1`.
 
 ## Response rules
 
@@ -44,6 +44,8 @@ Returns `201 Created` with the created user's public profile and a 15-minute bea
 ### Sign in
 
 `POST /api/v1/auth/login` accepts `email` and `password`. Invalid credentials return the same generic `401 Unauthorized` message, whether the email or password was incorrect.
+
+The React authentication screen calls these endpoints directly. It keeps the access token in memory for the current page session and sends it only in the `Authorization` header.
 
 ### Current account
 
