@@ -80,6 +80,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [analytics, setAnalytics] = useState(null)
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
   const activeFilterCount = [filter !== 'ALL', Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
+  const hasInvalidDateRange = Boolean(startDate && endDate && startDate > endDate)
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
@@ -425,16 +426,16 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                   <option value="ALL">All activity</option><option value="INCOME">Income</option><option value="EXPENSE">Expenses</option>
                 </select>
                 </label>
-                <label className="date-filter"><span>From</span><input type="date" value={startDate} onChange={(event) => {
+                <label className="date-filter"><span>From</span><input type="date" max={endDate || undefined} value={startDate} onChange={(event) => {
                   setStartDate(event.target.value)
                   setTransactionPage(0)
                 }} /></label>
-                <label className="date-filter"><span>To</span><input type="date" value={endDate} onChange={(event) => {
+                <label className="date-filter"><span>To</span><input type="date" min={startDate || undefined} value={endDate} onChange={(event) => {
                   setEndDate(event.target.value)
                   setTransactionPage(0)
                 }} /></label>
                 <button className="export-button" type="button" onClick={handleExport}
-                  disabled={isExporting || transactionPageInfo.totalItems === 0}>
+                  disabled={isExporting || hasInvalidDateRange || transactionPageInfo.totalItems === 0}>
                   {isExporting ? 'Preparing…' : 'Export CSV'}
                 </button>
                 <button className="clear-filters" type="button" onClick={clearTransactionFilters} disabled={activeFilterCount === 0}>
@@ -442,6 +443,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 </button>
               </div>
             </div>
+            {hasInvalidDateRange && <div className="filter-warning" role="status">Choose a start date that is on or before the end date. CSV export is unavailable until the range is corrected.</div>}
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>
               : transactions.length === 0 ? <div className="empty-state"><span className="empty-icon">⌁</span>
                 <strong>{filter === 'ALL' ? 'Your story starts here' : `No ${filter.toLowerCase()} yet`}</strong>

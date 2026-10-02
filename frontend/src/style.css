@@ -380,6 +380,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .clear-filters { min-height: 34px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #6f7d74; cursor: pointer; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .clear-filters:hover:not(:disabled) { border-color: #e5ebe6; background: #f7f9f7; color: #236744; }
 .clear-filters:disabled { color: #aab3ac; cursor: default; }
+.filter-warning { margin: 0 18px; padding: 10px 12px; border: 1px solid #f0d9b7; border-radius: 8px; background: #fffaf1; color: #805b22; font-size: 10px; line-height: 1.5; }
 
 @media (max-width: 820px) {
   .dashboard-content { width: min(100% - 36px, 680px); padding-top: 35px; }
