@@ -54,6 +54,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
@@ -138,6 +139,12 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     return () => window.clearTimeout(timer)
   }, [searchDraft])
 
+  useEffect(() => {
+    if (!successMessage) return undefined
+    const timer = window.setTimeout(() => setSuccessMessage(''), 4500)
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
+
   function changeTransactionFilter(value) {
     setFilter(value)
     setTransactionPage(0)
@@ -199,7 +206,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    const wasEditing = Boolean(editingId)
     setFormError('')
+    setSuccessMessage('')
     setIsSaving(true)
     const payload = { ...form, amount: Number(form.amount), note: form.note.trim() || null }
     try {
@@ -209,6 +218,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         ...current,
         [payload.type]: [...new Set([...current[payload.type], payload.category])].sort((a, b) => a.localeCompare(b)),
       }))
+      setSuccessMessage(wasEditing ? 'Transaction updated.' : 'Transaction added.')
       cancelEdit()
       await loadDashboard()
     } catch (error) {
@@ -221,8 +231,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleDelete(transaction) {
     if (!window.confirm(`Delete this ${transaction.type.toLowerCase()} of ${money.format(transaction.amount)}?`)) return
+    setSuccessMessage('')
     try {
       await deleteTransaction(session.token, transaction.id)
+      setSuccessMessage('Transaction deleted.')
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -245,7 +257,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleBudgetSubmit(event) {
     event.preventDefault()
+    const wasEditing = Boolean(editingBudgetId)
     setBudgetError('')
+    setSuccessMessage('')
     setIsSavingBudget(true)
     const payload = { ...budgetForm, category: budgetForm.category.trim(), monthlyLimit: Number(budgetForm.monthlyLimit) }
     try {
@@ -255,6 +269,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         ...current,
         EXPENSE: [...new Set([...current.EXPENSE, payload.category])].sort((a, b) => a.localeCompare(b)),
       }))
+      setSuccessMessage(wasEditing ? 'Budget updated.' : 'Budget created.')
       setBudgetMonth(payload.month)
       setEditingBudgetId(null)
       setBudgetForm({ ...emptyBudget(), month: payload.month })
@@ -269,8 +284,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleBudgetDelete(budget) {
     if (!window.confirm(`Delete the ${budget.category} budget for ${budget.month}?`)) return
+    setSuccessMessage('')
     try {
       await deleteBudget(session.token, budget.id)
+      setSuccessMessage('Budget deleted.')
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -299,7 +316,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleGoalSubmit(event) {
     event.preventDefault()
+    const wasEditing = Boolean(editingGoalId)
     setGoalError('')
+    setSuccessMessage('')
     setIsSavingGoal(true)
     const payload = {
       ...goalForm,
@@ -312,6 +331,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     try {
       if (editingGoalId) await updateGoal(session.token, editingGoalId, payload)
       else await createGoal(session.token, payload)
+      setSuccessMessage(wasEditing ? 'Savings goal updated.' : 'Savings goal created.')
       cancelGoalEdit()
       await loadDashboard()
     } catch (error) {
@@ -324,8 +344,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   async function handleGoalDelete(goal) {
     if (!window.confirm(`Delete the “${goal.name}” savings goal?`)) return
+    setSuccessMessage('')
     try {
       await deleteGoal(session.token, goal.id)
+      setSuccessMessage('Savings goal deleted.')
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -402,6 +424,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           </article>
         </section>}
 
+        {successMessage && <div className="success-banner" role="status" aria-live="polite">
+          <span aria-hidden="true">✓</span><span>{successMessage}</span>
+          <button type="button" onClick={() => setSuccessMessage('')} aria-label="Dismiss success message">Dismiss</button>
+        </div>}
         {loadError && <div className="dashboard-alert" role="alert">{loadError}<button type="button" onClick={loadDashboard}>Try again</button></div>}
 
         {route === '/' && <section className="panel recent-panel" aria-labelledby="recent-heading">

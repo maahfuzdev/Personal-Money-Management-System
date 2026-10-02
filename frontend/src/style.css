@@ -267,6 +267,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .transaction-form .form-field input { min-height: 42px; font-size: 12px; }
 .transaction-form .submit-button { min-height: 45px; font-size: 12px; }
 .cancel-edit { justify-self: center; font-size: 11px; }
+.success-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; padding: 11px 14px; border: 1px solid #cce6d3; border-radius: 10px; background: #eff8f1; color: #276a43; font-size: 12px; }
+.success-banner > span:first-child { display: grid; width: 20px; height: 20px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #d9efdf; font-size: 12px; font-weight: 700; }
+.success-banner > span:nth-child(2) { flex: 1; }
+.success-banner button { padding: 5px 7px; border: 0; border-radius: 6px; background: transparent; color: #397a57; cursor: pointer; font-size: 10px; font-weight: 600; }
+.success-banner button:hover { background: #e2f2e6; }
 .dashboard-alert { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 20px; padding: 12px 15px; border: 1px solid #f1cbc7; border-radius: 10px; background: #fff6f5; color: #963e37; font-size: 12px; }
 .dashboard-alert button { border: 0; background: transparent; color: #963e37; cursor: pointer; font-weight: 700; }
 .dashboard-footer { padding: 26px 0 0; color: #98a39b; font-size: 10px; text-align: center; }
