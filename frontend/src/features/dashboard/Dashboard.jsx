@@ -352,7 +352,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         <section className="dashboard-welcome">
           <div><p className="eyebrow">{eyebrow}</p><h1>{route === '/' ? `Good to see you, ${session.user.name.split(' ')[0]}.` : pageTitle}</h1>
             <p>{route === '/' ? pageDescription : pageDescription}</p></div>
-          <span className="today-pill">{dateLabel.format(new Date())}</span>
+          <div className="welcome-actions">
+            <span className="today-pill">{dateLabel.format(new Date())}</span>
+            {route === '/' && <button className="primary-action" type="button" onClick={() => navigate('/transactions')}><span aria-hidden="true">+</span> Add transaction</button>}
+          </div>
         </section>
 
         {route === '/' && <section className="summary-grid" aria-label="Account totals">
