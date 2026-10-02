@@ -23,8 +23,10 @@ npm run build
 
 The production output is written to `dist/` and can be deployed as a static site.
 
-## Finance dashboard
+## Finance workspace
 
-After signing in or registering, the dashboard loads the signed-in user's transaction list and all-time income, expense, and balance totals. Search by category or note, filter by income/expense or date range, move through transaction pages, and export the matching results as CSV. Previously used categories appear as suggestions in transaction and budget forms; new category text is still accepted. Monthly insights compare income and expenses across six months and break the selected month's expenses down by category. Use the transaction form to add income or expenses, and the Edit/Delete actions on each row to maintain the list. Monthly budgets let you set a category limit and track spending. Savings goals let you set a target, record the amount saved, and follow progress. Amounts are shown in Bangladeshi taka (BDT).
+After signing in or registering, the responsive workspace is split into five navigable pages: Overview, Transactions, Budgets, Savings goals, and Reports. Desktop uses a persistent sidebar; mobile uses a fixed bottom navigation bar. Browser back/forward navigation is supported.
+
+Overview shows all-time income, expense, and balance totals plus recent transactions. Transactions supports search by category or note, income/expense and date-range filters, server-side pagination, CSV export, and create/edit/delete actions. Previously used categories appear as suggestions in transaction and budget forms; new category text is accepted. Budgets lets you set monthly category limits and track spending. Savings goals tracks target amounts, saved amounts, dates, and progress. Reports compares six months of cash flow and shows the selected month's spending by category. Amounts are shown in Bangladeshi taka (BDT).
 
 The access token stays in React memory and is sent as a bearer token for API requests. It is cleared when you sign out or reload the page, so sign in again after a reload. The dashboard signs out automatically if the API reports that the token has expired.

@@ -31,7 +31,25 @@ const emptyGoal = () => ({ name: '', targetAmount: '', currentAmount: '0', targe
 const money = new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 })
 const dateLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
 
-function Dashboard({ session, onSignOut }) {
+const NAV_ITEMS = [
+  { path: '/', label: 'Overview', icon: 'overview' },
+  { path: '/transactions', label: 'Transactions', icon: 'transactions' },
+  { path: '/budgets', label: 'Budgets', icon: 'budgets' },
+  { path: '/goals', label: 'Savings goals', icon: 'goals' },
+  { path: '/reports', label: 'Reports', icon: 'reports' },
+]
+
+const PAGE_COPY = {
+  '/': ['YOUR MONEY, AT A GLANCE', 'Overview', 'A clear picture of your money, all in one place.'],
+  '/transactions': ['YOUR ACTIVITY', 'Transactions', 'Review, search, and manage the money moving in and out.'],
+  '/budgets': ['PLAN WITH CONFIDENCE', 'Budgets', 'Set monthly limits and keep your spending on track.'],
+  '/goals': ['MAKE IT HAPPEN', 'Savings goals', 'Give your savings a purpose and celebrate each milestone.'],
+  '/reports': ['UNDERSTAND YOUR HABITS', 'Reports', 'Explore your cash flow and see where your money goes.'],
+}
+
+function Dashboard({ session, onSignOut, navigate, path }) {
+  const route = PAGE_COPY[path] ? path : '/'
+  const [eyebrow, pageTitle, pageDescription] = PAGE_COPY[route]
   const [transactions, setTransactions] = useState([])
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 })
   const [isLoading, setIsLoading] = useState(true)
@@ -305,32 +323,45 @@ function Dashboard({ session, onSignOut }) {
   }
 
   return (
-    <main className="dashboard-shell">
-      <header className="dashboard-header">
-        <a className="brand dashboard-brand" href="/" aria-label="Moneywise home">
+    <div className="app-frame">
+      <aside className="app-sidebar">
+        <a className="brand sidebar-brand" href="/" onClick={(event) => { event.preventDefault(); navigate('/') }} aria-label="Moneywise overview">
           <span className="brand-mark" aria-hidden="true">M</span><span className="brand-name">moneywise</span>
         </a>
-        <div className="profile-area">
-          <div className="profile-avatar" aria-hidden="true">{session.user.name.slice(0, 1).toUpperCase()}</div>
+        <div className="workspace-label">PERSONAL SPACE</div>
+        <nav className="sidebar-nav" aria-label="Main navigation">
+          {NAV_ITEMS.map((item) => <NavItem key={item.path} item={item} active={route === item.path} navigate={navigate} />)}
+        </nav>
+        <div className="sidebar-note"><span className="sidebar-note-mark">✦</span><div><strong>Your money, your pace.</strong><span>Small steps add up.</span></div></div>
+        <div className="sidebar-account"><div className="profile-avatar" aria-hidden="true">{session.user.name.slice(0, 1).toUpperCase()}</div>
           <div className="profile-copy"><strong>{session.user.name}</strong><span>{session.user.email}</span></div>
-          <button className="text-button" type="button" onClick={onSignOut}>Sign out</button>
+          <button className="sidebar-signout" type="button" onClick={onSignOut} aria-label="Sign out">↗</button>
         </div>
-      </header>
+      </aside>
 
-      <div className="dashboard-content">
+      <div className="app-main">
+        <header className="app-topbar">
+          <div className="topbar-title"><span>PERSONAL FINANCE</span><strong>{pageTitle}</strong></div>
+          <div className="topbar-profile"><span className="online-indicator" /><span>Welcome back, {session.user.name.split(' ')[0]}</span>
+            <div className="profile-avatar" aria-hidden="true">{session.user.name.slice(0, 1).toUpperCase()}</div>
+            <button type="button" onClick={onSignOut}>Sign out</button>
+          </div>
+        </header>
+
+      <main className="page-content">
         <section className="dashboard-welcome">
-          <div><p className="eyebrow">YOUR MONEY, AT A GLANCE</p><h1>Good to see you, {session.user.name.split(' ')[0]}.</h1>
-            <p>Here is how your personal finances are looking.</p></div>
+          <div><p className="eyebrow">{eyebrow}</p><h1>{route === '/' ? `Good to see you, ${session.user.name.split(' ')[0]}.` : pageTitle}</h1>
+            <p>{route === '/' ? pageDescription : pageDescription}</p></div>
           <span className="today-pill">{dateLabel.format(new Date())}</span>
         </section>
 
-        <section className="summary-grid" aria-label="Account totals">
+        {route === '/' && <section className="summary-grid" aria-label="Account totals">
           <SummaryCard label="Total balance" value={summary.balance} kind="balance" icon="↗" />
           <SummaryCard label="Income" value={summary.totalIncome} kind="income" icon="↓" />
           <SummaryCard label="Expenses" value={summary.totalExpense} kind="expense" icon="↑" />
-        </section>
+        </section>}
 
-        <section className="insights-grid" aria-label="Monthly spending insights">
+        {(route === '/' || route === '/reports') && <section className="insights-grid" aria-label="Monthly spending insights">
           <article className="panel insight-panel trend-panel">
             <div className="panel-heading insight-heading"><div><p className="eyebrow">THE BIG PICTURE</p><h2>Cash flow</h2></div>
               <label className="budget-month-label"><span className="sr-only">Choose analytics month</span>
@@ -355,11 +386,21 @@ function Dashboard({ session, onSignOut }) {
             {isLoading ? <div className="empty-state chart-loading"><span className="loading-dot" /></div>
               : <CategoryChart categories={analytics?.expenseByCategory || []} />}
           </article>
-        </section>
+        </section>}
 
         {loadError && <div className="dashboard-alert" role="alert">{loadError}<button type="button" onClick={loadDashboard}>Try again</button></div>}
 
-        <div className="dashboard-columns">
+        {route === '/' && <section className="panel recent-panel" aria-labelledby="recent-heading">
+          <div className="panel-heading"><div><p className="eyebrow">LATEST MOVEMENT</p><h2 id="recent-heading">Recent transactions</h2></div>
+            <button className="subtle-link" type="button" onClick={() => navigate('/transactions')}>View all <span aria-hidden="true">→</span></button>
+          </div>
+          {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading recent activity…</div>
+            : transactions.length === 0 ? <div className="empty-state"><strong>No transactions yet</strong><span>Add your first transaction from the Transactions page.</span></div>
+              : <div className="transaction-list">{transactions.slice(0, 5).map((transaction) =>
+                <TransactionRow key={transaction.id} transaction={transaction} />)}</div>}
+        </section>}
+
+        {route === '/transactions' && <div className="dashboard-columns">
           <section className="panel transaction-panel" aria-labelledby="activity-heading">
             <div className="panel-heading transaction-heading"><div><p className="eyebrow">YOUR ACTIVITY</p><h2 id="activity-heading">Transactions</h2></div>
               <div className="transaction-toolbar">
@@ -426,9 +467,9 @@ function Dashboard({ session, onSignOut }) {
               {editingId && <button className="cancel-edit" type="button" onClick={cancelEdit}>Cancel editing</button>}
             </form>
           </section>
-        </div>
+        </div>}
 
-        <section className="panel budgets-panel" aria-labelledby="budgets-heading">
+        {route === '/budgets' && <section className="panel budgets-panel page-panel" aria-labelledby="budgets-heading">
           <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
             <span className="selected-month-label">{formatMonth(budgetMonth)}</span>
           </div>
@@ -448,9 +489,9 @@ function Dashboard({ session, onSignOut }) {
               {editingBudgetId && <button className="cancel-edit" type="button" onClick={cancelBudgetEdit}>Cancel editing</button>}
             </form>
           </div>
-        </section>
+        </section>}
 
-        <section className="panel goals-panel" aria-labelledby="goals-heading">
+        {route === '/goals' && <section className="panel goals-panel page-panel" aria-labelledby="goals-heading">
           <div className="panel-heading"><div><p className="eyebrow">MAKE IT HAPPEN</p><h2 id="goals-heading">Savings goals</h2></div>
             <span className="goals-count">{goals.filter((goal) => goal.completed).length} of {goals.length} complete</span>
           </div>
@@ -474,12 +515,17 @@ function Dashboard({ session, onSignOut }) {
               {editingGoalId && <button className="cancel-edit" type="button" onClick={cancelGoalEdit}>Cancel editing</button>}
             </form>
           </div>
-        </section>
+        </section>}
+        {route === '/reports' && <div className="report-note"><span aria-hidden="true">i</span><p>Reports use the transactions recorded in your account. Choose a month above to compare cash flow and category spending.</p></div>}
         <datalist id="category-suggestions-INCOME">{categorySuggestions.INCOME.map((category) => <option key={category} value={category} />)}</datalist>
         <datalist id="category-suggestions-EXPENSE">{categorySuggestions.EXPENSE.map((category) => <option key={category} value={category} />)}</datalist>
+        </main>
         <footer className="dashboard-footer">Your financial space, thoughtfully organized.</footer>
       </div>
-    </main>
+      <nav className="mobile-nav" aria-label="Main navigation">
+        {NAV_ITEMS.map((item) => <NavItem key={item.path} item={item} active={route === item.path} navigate={navigate} compact />)}
+      </nav>
+    </div>
   )
 }
 
@@ -494,8 +540,30 @@ function TransactionRow({ transaction, onEdit, onDelete }) {
   return <article className="transaction-row"><span className={`transaction-icon ${isIncome ? 'income' : 'expense'}`} aria-hidden="true">{isIncome ? '↙' : '↗'}</span>
     <div className="transaction-info"><strong>{transaction.category}</strong><span>{transaction.note || (isIncome ? 'Income' : 'Expense')} <i>·</i> {dateLabel.format(new Date(`${transaction.transactionDate}T00:00:00`))}</span></div>
     <strong className={`transaction-amount ${isIncome ? 'income' : 'expense'}`}>{isIncome ? '+' : '−'}{money.format(transaction.amount)}</strong>
-    <div className="row-actions"><button type="button" onClick={onEdit} aria-label={`Edit ${transaction.category}`}>Edit</button><button type="button" onClick={onDelete} aria-label={`Delete ${transaction.category}`}>Delete</button></div>
+    {(onEdit || onDelete) && <div className="row-actions">{onEdit && <button type="button" onClick={onEdit} aria-label={`Edit ${transaction.category}`}>Edit</button>}{onDelete && <button type="button" onClick={onDelete} aria-label={`Delete ${transaction.category}`}>Delete</button>}</div>}
   </article>
+}
+
+function NavItem({ item, active, navigate, compact = false }) {
+  return <a className={`nav-item${active ? ' active' : ''}${compact ? ' compact' : ''}`} href={item.path}
+    aria-current={active ? 'page' : undefined} onClick={(event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      event.preventDefault()
+      navigate(item.path)
+    }}>
+    <NavIcon name={item.icon} /><span>{item.label}</span>
+  </a>
+}
+
+function NavIcon({ name }) {
+  const shapes = {
+    overview: <><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="5" rx="2" /><rect x="13" y="10" width="8" height="11" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /></>,
+    transactions: <><path d="M7 7h13M17 4l3 3-3 3" /><path d="M17 17H4m3-3-3 3 3 3" /></>,
+    budgets: <><path d="M4 19V5m0 14h17" /><path d="m7 15 4-4 3 2 5-6" /></>,
+    goals: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></>,
+    reports: <><path d="M5 20V10m7 10V4m7 16v-7" /><path d="M3 20h18" /></>,
+  }
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{shapes[name]}</svg>
 }
 
 function BudgetRow({ budget, onEdit, onDelete }) {

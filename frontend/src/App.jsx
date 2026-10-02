@@ -1,11 +1,34 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import AuthScreen from './features/auth/AuthScreen.jsx'
 import Dashboard from './features/dashboard/Dashboard.jsx'
 
 function App() {
   const [session, setSession] = useState(null)
+  const [path, setPath] = useState(window.location.pathname)
 
-  if (session) return <Dashboard session={session} onSignOut={() => setSession(null)} />
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigate = useCallback((nextPath) => {
+    if (window.location.pathname !== nextPath) window.history.pushState({}, '', nextPath)
+    setPath(nextPath)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [])
+
+  const handleAuthenticated = useCallback((nextSession) => {
+    setSession(nextSession)
+    navigate('/')
+  }, [navigate])
+
+  const handleSignOut = useCallback(() => {
+    setSession(null)
+    navigate('/login')
+  }, [navigate])
+
+  if (session) return <Dashboard session={session} onSignOut={handleSignOut} navigate={navigate} path={path} />
 
   return (
     <main className="app-shell">
@@ -20,7 +43,7 @@ function App() {
           </div>
           <p className="story-caption">A clearer view, one step at a time.</p>
         </div>
-        <AuthScreen onAuthenticated={setSession} />
+        <AuthScreen onAuthenticated={handleAuthenticated} />
       </section>
       <Footer />
     </main>

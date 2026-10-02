@@ -20,7 +20,7 @@ Backend code will be grouped by feature. Each feature keeps its HTTP controller,
 
 ## Frontend boundaries
 
-The React app keeps account access and the signed-in dashboard in feature folders, with API clients and styling separate. The dashboard supports responsive transaction search, date/type filters, server-side pagination and CSV export, category suggestions, entry, editing, deletion, all-time totals, monthly cash-flow and category charts, monthly category budgets, and savings goals with progress. Forms provide labels, browser/server validation, loading states, and clear errors.
+The React app keeps account access and the signed-in finance workspace in feature folders, with API clients and styling separate. The workspace has distinct Overview, Transactions, Budgets, Savings goals, and Reports routes. Desktop uses a persistent sidebar, while mobile uses bottom navigation; browser back and forward are supported. The Transactions page supports search, date/type filters, server-side pagination, CSV export, category suggestions, and entry, editing, and deletion. Overview shows all-time totals and recent activity. Reports shows monthly cash-flow and category charts. Budgets tracks monthly category limits, and Savings goals tracks targets and progress. Forms provide labels, browser/server validation, loading states, and clear errors.
 
 ## Data and configuration
 
