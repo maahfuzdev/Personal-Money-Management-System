@@ -1,6 +1,8 @@
 package com.maahfuzdev.moneymanager.transaction;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,7 +13,18 @@ import java.time.LocalDate;
 
 public interface TransactionRepository extends JpaRepository<MoneyTransaction, Long> {
 
-    List<MoneyTransaction> findAllByUserIdOrderByTransactionDateDescCreatedAtDesc(Long userId);
+    @Query(value = "select t from MoneyTransaction t where t.user.id = :userId " +
+            "and (:type is null or t.type = :type) " +
+            "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
+            "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ",
+            countQuery = "select count(t) from MoneyTransaction t where t.user.id = :userId " +
+                    "and (:type is null or t.type = :type) " +
+                    "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
+                    "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ")
+    Page<MoneyTransaction> searchByUser(@Param("userId") Long userId,
+                                        @Param("type") TransactionType type,
+                                        @Param("search") String search,
+                                        Pageable pageable);
 
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);
 

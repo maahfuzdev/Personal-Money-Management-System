@@ -1,9 +1,13 @@
 package com.maahfuzdev.moneymanager.transaction;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,11 +15,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
+@Validated
 @RestController
 @RequestMapping("/api/v1/transactions")
 public class TransactionController {
@@ -27,8 +31,12 @@ public class TransactionController {
     }
 
     @GetMapping
-    public List<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        return transactionService.list(jwt.getSubject());
+    public TransactionPageResponse list(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(required = false) @Size(max = 100) String search) {
+        return transactionService.list(jwt.getSubject(), type, search, page, size);
     }
 
     @PostMapping

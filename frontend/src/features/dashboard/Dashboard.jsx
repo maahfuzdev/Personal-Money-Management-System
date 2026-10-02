@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   createTransaction,
   createBudget,
@@ -39,6 +39,10 @@ function Dashboard({ session, onSignOut }) {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [filter, setFilter] = useState('ALL')
+  const [searchDraft, setSearchDraft] = useState('')
+  const [search, setSearch] = useState('')
+  const [transactionPage, setTransactionPage] = useState(0)
+  const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
   const [budgets, setBudgets] = useState([])
   const [budgetForm, setBudgetForm] = useState(emptyBudget)
   const [budgetMonth, setBudgetMonth] = useState(currentMonth())
@@ -55,14 +59,22 @@ function Dashboard({ session, onSignOut }) {
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [items, totals, monthlyBudgets, savingsGoals, monthlyAnalytics] = await Promise.all([
-        getTransactions(session.token),
+      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics] = await Promise.all([
+        getTransactions(session.token, {
+          page: transactionPage,
+          size: 10,
+          type: filter === 'ALL' ? undefined : filter,
+          search,
+        }),
         getTransactionSummary(session.token),
         getBudgets(session.token, selectedMonth),
         getGoals(session.token),
         getDashboardAnalytics(session.token, selectedMonth),
       ])
-      setTransactions(items)
+      setTransactions(transactionResult.items)
+      setTransactionPageInfo(transactionResult)
+      const lastAvailablePage = Math.max(0, transactionResult.totalPages - 1)
+      if (transactionPage !== lastAvailablePage) setTransactionPage(lastAvailablePage)
       setSummary(totals)
       setBudgets(monthlyBudgets)
       setGoals(savingsGoals)
@@ -73,13 +85,22 @@ function Dashboard({ session, onSignOut }) {
     } finally {
       setIsLoading(false)
     }
-  }, [budgetMonth, onSignOut, session.token])
+  }, [budgetMonth, filter, onSignOut, search, session.token, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
-  const visibleTransactions = useMemo(() => filter === 'ALL'
-    ? transactions
-    : transactions.filter((transaction) => transaction.type === filter), [filter, transactions])
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTransactionPage(0)
+      setSearch(searchDraft.trim())
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchDraft])
+
+  function changeTransactionFilter(value) {
+    setFilter(value)
+    setTransactionPage(0)
+  }
 
   function startEdit(transaction) {
     setEditingId(transaction.id)
@@ -285,21 +306,33 @@ function Dashboard({ session, onSignOut }) {
 
         <div className="dashboard-columns">
           <section className="panel transaction-panel" aria-labelledby="activity-heading">
-            <div className="panel-heading"><div><p className="eyebrow">YOUR ACTIVITY</p><h2 id="activity-heading">Transactions</h2></div>
-              <label className="filter-label"><span className="sr-only">Filter transactions</span>
-                <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+            <div className="panel-heading transaction-heading"><div><p className="eyebrow">YOUR ACTIVITY</p><h2 id="activity-heading">Transactions</h2></div>
+              <div className="transaction-toolbar">
+                <label className="transaction-search"><span className="sr-only">Search transactions</span>
+                  <input type="search" maxLength="100" placeholder="Search category or note" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} />
+                </label>
+                <label className="filter-label"><span className="sr-only">Filter transactions</span>
+                <select value={filter} onChange={(event) => changeTransactionFilter(event.target.value)}>
                   <option value="ALL">All activity</option><option value="INCOME">Income</option><option value="EXPENSE">Expenses</option>
                 </select>
-              </label>
+                </label>
+              </div>
             </div>
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>
-              : visibleTransactions.length === 0 ? <div className="empty-state"><span className="empty-icon">⌁</span>
+              : transactions.length === 0 ? <div className="empty-state"><span className="empty-icon">⌁</span>
                 <strong>{filter === 'ALL' ? 'Your story starts here' : `No ${filter.toLowerCase()} yet`}</strong>
-                <span>{filter === 'ALL' ? 'Add a transaction to see where your money goes.' : 'Try another filter or add a transaction.'}</span>
+                <span>{search ? 'No transactions match that search. Try another word or clear the search.' : filter === 'ALL' ? 'Add a transaction to see where your money goes.' : 'Try another filter or add a transaction.'}</span>
               </div> : <div className="transaction-list">
-                {visibleTransactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction}
+                {transactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction}
                   onEdit={() => startEdit(transaction)} onDelete={() => handleDelete(transaction)} />)}
               </div>}
+            {!isLoading && transactionPageInfo.totalItems > 0 && <div className="transaction-pagination">
+              <span>Showing {transactionPage * transactionPageInfo.size + 1}–{Math.min((transactionPage + 1) * transactionPageInfo.size, transactionPageInfo.totalItems)} of {transactionPageInfo.totalItems}</span>
+              <div><button type="button" disabled={transactionPage <= 0} onClick={() => setTransactionPage((page) => Math.max(0, page - 1))}>Previous</button>
+                <span>Page {transactionPage + 1} of {transactionPageInfo.totalPages}</span>
+                <button type="button" disabled={transactionPage + 1 >= transactionPageInfo.totalPages} onClick={() => setTransactionPage((page) => page + 1)}>Next</button>
+              </div>
+            </div>}
           </section>
 
           <section className="panel form-panel" aria-labelledby="form-heading">

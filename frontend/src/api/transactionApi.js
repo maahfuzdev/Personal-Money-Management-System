@@ -25,8 +25,13 @@ async function request(path, token, options = {}) {
   return payload
 }
 
-export function getTransactions(token) {
-  return request('/transactions', token)
+export function getTransactions(token, filters = {}) {
+  const params = new URLSearchParams()
+  params.set('page', String(filters.page ?? 0))
+  params.set('size', String(filters.size ?? 10))
+  if (filters.type) params.set('type', filters.type)
+  if (filters.search) params.set('search', filters.search)
+  return request(`/transactions?${params.toString()}`, token)
 }
 
 export function getTransactionSummary(token) {

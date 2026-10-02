@@ -2,6 +2,9 @@ package com.maahfuzdev.moneymanager.transaction;
 
 import com.maahfuzdev.moneymanager.user.AppUser;
 import com.maahfuzdev.moneymanager.user.AppUserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +23,13 @@ public class TransactionService {
         this.userRepository = userRepository;
     }
 
-    public List<TransactionResponse> list(String email) {
+    public TransactionPageResponse list(String email, TransactionType type, String search, int page, int size) {
         AppUser user = user(email);
-        return transactionRepository.findAllByUserIdOrderByTransactionDateDescCreatedAtDesc(user.getId())
-                .stream().map(TransactionResponse::from).toList();
+        String query = search == null || search.isBlank() ? null : search.trim();
+        Page<MoneyTransaction> results = transactionRepository.searchByUser(user.getId(), type, query,
+                PageRequest.of(page, size, Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
+        return new TransactionPageResponse(results.map(TransactionResponse::from).getContent(), results.getNumber(),
+                results.getSize(), results.getTotalElements(), results.getTotalPages());
     }
 
     @Transactional
