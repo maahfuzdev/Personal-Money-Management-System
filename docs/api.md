@@ -21,7 +21,7 @@ All application endpoints will use `/api/v1`. The browser client receives the AP
 | `/transactions` | Manage income and expenses | Implemented |
 | `/budgets` | Set and review monthly spending budgets | Implemented |
 | `/goals` | Track savings goals | Implemented |
-| `/dashboard` | Return summary totals and trends | Planned |
+| `/dashboard` | Return monthly totals and spending trends | Implemented |
 
 ## Transactions
 
@@ -102,6 +102,30 @@ Goal requests contain a `name`, positive `targetAmount`, non-negative `currentAm
   "currentAmount": 25000.00,
   "targetDate": "2027-06-30",
   "note": "Build a six-month cushion"
+}
+```
+
+## Dashboard analytics
+
+`GET /api/v1/dashboard/analytics?month=2026-10` requires a bearer token. The `month` is optional and defaults to the current month. The response gives the selected month's income, expenses, and net balance; a six-month income/expense trend ending on the selected month; and that month's expense totals grouped by category. The endpoint only summarizes the signed-in account's data.
+
+```json
+{
+  "selectedMonth": "2026-10",
+  "monthIncome": 2500.00,
+  "monthExpense": 420.00,
+  "monthBalance": 2080.00,
+  "monthlyTrend": [
+    { "month": "2026-05", "income": 0.00, "expense": 0.00 },
+    { "month": "2026-06", "income": 0.00, "expense": 0.00 },
+    { "month": "2026-07", "income": 0.00, "expense": 0.00 },
+    { "month": "2026-08", "income": 0.00, "expense": 0.00 },
+    { "month": "2026-09", "income": 0.00, "expense": 0.00 },
+    { "month": "2026-10", "income": 2500.00, "expense": 420.00 }
+  ],
+  "expenseByCategory": [
+    { "category": "food", "amount": 420.00, "sharePercent": 100.0 }
+  ]
 }
 ```
 

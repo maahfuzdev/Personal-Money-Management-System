@@ -76,3 +76,7 @@ export function updateGoal(token, id, goal) {
 export function deleteGoal(token, id) {
   return request(`/goals/${id}`, token, { method: 'DELETE' })
 }
+
+export function getDashboardAnalytics(token, month) {
+  return request(`/dashboard/analytics?month=${encodeURIComponent(month)}`, token)
+}

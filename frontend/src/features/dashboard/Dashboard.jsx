@@ -7,6 +7,7 @@ import {
   deleteBudget,
   deleteTransaction,
   getBudgets,
+  getDashboardAnalytics,
   getGoals,
   getTransactionSummary,
   getTransactions,
@@ -49,20 +50,23 @@ function Dashboard({ session, onSignOut }) {
   const [editingGoalId, setEditingGoalId] = useState(null)
   const [goalError, setGoalError] = useState('')
   const [isSavingGoal, setIsSavingGoal] = useState(false)
+  const [analytics, setAnalytics] = useState(null)
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [items, totals, monthlyBudgets, savingsGoals] = await Promise.all([
+      const [items, totals, monthlyBudgets, savingsGoals, monthlyAnalytics] = await Promise.all([
         getTransactions(session.token),
         getTransactionSummary(session.token),
         getBudgets(session.token, selectedMonth),
         getGoals(session.token),
+        getDashboardAnalytics(session.token, selectedMonth),
       ])
       setTransactions(items)
       setSummary(totals)
       setBudgets(monthlyBudgets)
       setGoals(savingsGoals)
+      setAnalytics(monthlyAnalytics)
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
@@ -250,6 +254,33 @@ function Dashboard({ session, onSignOut }) {
           <SummaryCard label="Expenses" value={summary.totalExpense} kind="expense" icon="↑" />
         </section>
 
+        <section className="insights-grid" aria-label="Monthly spending insights">
+          <article className="panel insight-panel trend-panel">
+            <div className="panel-heading insight-heading"><div><p className="eyebrow">THE BIG PICTURE</p><h2>Cash flow</h2></div>
+              <label className="budget-month-label"><span className="sr-only">Choose analytics month</span>
+                <input type="month" value={budgetMonth} onChange={(event) => {
+                  if (!event.target.value) return
+                  setBudgetMonth(event.target.value)
+                  setBudgetForm({ ...emptyBudget(), month: event.target.value })
+                  setEditingBudgetId(null)
+                }} />
+              </label>
+            </div>
+            <div className="insight-totals">
+              <div><span>Income this month</span><strong className="income-text">{money.format(analytics?.monthIncome || 0)}</strong></div>
+              <div><span>Expenses this month</span><strong className="expense-text">{money.format(analytics?.monthExpense || 0)}</strong></div>
+              <div><span>Net cash flow</span><strong>{money.format(analytics?.monthBalance || 0)}</strong></div>
+            </div>
+            {isLoading ? <div className="empty-state chart-loading"><span className="loading-dot" /></div>
+              : <CashFlowChart trend={analytics?.monthlyTrend || []} />}
+          </article>
+          <article className="panel insight-panel category-panel">
+            <div className="panel-heading"><div><p className="eyebrow">WHERE IT GOES</p><h2>Spending by category</h2></div></div>
+            {isLoading ? <div className="empty-state chart-loading"><span className="loading-dot" /></div>
+              : <CategoryChart categories={analytics?.expenseByCategory || []} />}
+          </article>
+        </section>
+
         {loadError && <div className="dashboard-alert" role="alert">{loadError}<button type="button" onClick={loadDashboard}>Try again</button></div>}
 
         <div className="dashboard-columns">
@@ -299,13 +330,7 @@ function Dashboard({ session, onSignOut }) {
 
         <section className="panel budgets-panel" aria-labelledby="budgets-heading">
           <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
-            <label className="budget-month-label"><span className="sr-only">Budget month</span>
-              <input type="month" value={budgetMonth} onChange={(event) => {
-                setBudgetMonth(event.target.value)
-                setBudgetForm({ ...emptyBudget(), month: event.target.value })
-                setEditingBudgetId(null)
-              }} />
-            </label>
+            <span className="selected-month-label">{formatMonth(budgetMonth)}</span>
           </div>
           <div className="budget-layout">
             <div className="budget-list">
@@ -399,6 +424,39 @@ function GoalCard({ goal, onEdit, onDelete }) {
     <div className="goal-progress" role="progressbar" aria-label={`${goal.name} savings progress`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}><span style={{ width: `${progress}%` }} /></div>
     <div className="goal-card-bottom"><span>{goal.note || (goal.completed ? 'You reached your goal!' : 'Every little bit adds up.')}</span><strong>{goal.completed ? 'Completed' : `${money.format(goal.remainingAmount)} to go`}</strong></div>
   </article>
+}
+
+const monthShortLabel = new Intl.DateTimeFormat('en', { month: 'short' })
+const monthFullLabel = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' })
+const formatMonth = (month) => monthFullLabel.format(new Date(`${month}-01T00:00:00`))
+
+function CashFlowChart({ trend }) {
+  if (!trend.length || trend.every((month) => Number(month.income) === 0 && Number(month.expense) === 0)) {
+    return <div className="empty-state chart-empty">Add transactions to see your six-month cash flow.</div>
+  }
+  const maximum = Math.max(1, ...trend.flatMap((month) => [Number(month.income), Number(month.expense)]))
+  return <div className="cashflow-chart" role="img" aria-label="Income and expense comparison for the selected month and previous five months">
+    <div className="chart-legend"><span><i className="legend-income" />Income</span><span><i className="legend-expense" />Expenses</span></div>
+    <div className="chart-columns">{trend.map((month) => {
+      const incomeHeight = Number(month.income) / maximum * 100
+      const expenseHeight = Number(month.expense) / maximum * 100
+      return <div className="chart-month" key={month.month}>
+        <div className="chart-bars"><span className="chart-bar-income" style={{ height: `${incomeHeight}%` }} title={`Income ${money.format(month.income)}`} />
+          <span className="chart-bar-expense" style={{ height: `${expenseHeight}%` }} title={`Expenses ${money.format(month.expense)}`} /></div>
+        <span>{monthShortLabel.format(new Date(`${month.month}-01T00:00:00`))}</span>
+      </div>
+    })}</div>
+  </div>
+}
+
+function CategoryChart({ categories }) {
+  if (!categories.length) return <div className="empty-state chart-empty">No expenses recorded for this month.</div>
+  const topCategories = categories.slice(0, 6)
+  const maxAmount = Math.max(...topCategories.map((category) => Number(category.amount)), 1)
+  return <div className="category-chart">{topCategories.map((category, index) => <div className="category-chart-row" key={category.category}>
+    <div className="category-chart-label"><strong>{category.category}</strong><span>{money.format(category.amount)} <i>·</i> {category.sharePercent}%</span></div>
+    <div className="category-track"><span className={`category-fill shade-${index % 4}`} style={{ width: `${Number(category.amount) / maxAmount * 100}%` }} /></div>
+  </div>)}</div>
 }
 
 export default Dashboard
