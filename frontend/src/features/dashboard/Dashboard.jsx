@@ -304,6 +304,12 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setBudgetError('')
   }
 
+  function changeBudgetMonth(month) {
+    if (!month || editingBudgetId) return
+    setBudgetMonth(month)
+    setBudgetForm({ ...emptyBudget(), month })
+  }
+
   async function handleBudgetSubmit(event) {
     event.preventDefault()
     const wasEditing = Boolean(editingBudgetId)
@@ -562,7 +568,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
         {route === '/budgets' && <section className="panel budgets-panel page-panel" aria-labelledby="budgets-heading">
           <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
-            <span className="selected-month-label">{formatMonth(budgetMonth)}</span>
+            <label className="budget-month-label"><span className="sr-only">Choose budget month</span>
+              <input type="month" value={budgetMonth} disabled={Boolean(editingBudgetId)} onChange={(event) => changeBudgetMonth(event.target.value)} />
+            </label>
           </div>
           <div className="budget-layout">
             <div className="budget-list">

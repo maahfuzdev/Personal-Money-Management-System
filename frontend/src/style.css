@@ -292,6 +292,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .budgets-panel { margin-top: 20px; }
 .budget-heading { min-height: 84px; }
 .budget-month-label input { min-height: 36px; padding: 0 10px; border: 1px solid #e5ebe6; border-radius: 8px; background: white; color: #59675e; font: inherit; font-size: 11px; }
+.budget-month-label input:disabled { background: #f5f7f5; color: #87938b; cursor: not-allowed; }
 .budget-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .56fr); gap: 24px; padding: 21px 23px 24px; }
 .budget-list { display: grid; align-content: start; }
 .empty-state.compact { min-height: 190px; }
@@ -381,7 +382,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .category-fill.shade-1 { background: #83ad76; }
 .category-fill.shade-2 { background: #daa37d; }
 .category-fill.shade-3 { background: #819fa2; }
-.selected-month-label { padding: 7px 11px; border-radius: 999px; background: #edf5ef; color: #397a57; font-size: 10px; font-weight: 600; }
 .transaction-heading { gap: 14px; }
 .transaction-toolbar { display: flex; align-items: center; justify-content: end; gap: 8px; flex-wrap: wrap; }
 .transaction-search input { width: clamp(135px, 18vw, 210px); min-height: 36px; padding: 0 10px; border: 1px solid #e5ebe6; border-radius: 8px; color: #435147; font-size: 10px; }
