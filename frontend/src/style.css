@@ -317,6 +317,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .budget-progress { height: 7px; overflow: hidden; border-radius: 99px; background: #edf2ee; }
 .budget-progress span { display: block; height: 100%; border-radius: inherit; background: #4d9a69; transition: width .25s ease; }
 .budget-progress span.over-budget { background: #d16b55; }
+.budget-projection { color: #738078; font-size: 10px; line-height: 1.5; }
+.budget-projection.projected-over { color: #a84c3b; font-weight: 650; }
 .budget-remaining { color: #828e85; font-size: 10px; }
 .budget-remaining.over-budget { color: #b85643; font-weight: 600; }
 .budget-form { display: grid; align-content: start; gap: 13px; padding: 17px; border: 1px solid #eef2ef; border-radius: 12px; background: #fbfcfb; }

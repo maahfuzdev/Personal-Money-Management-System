@@ -678,7 +678,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             <div className="budget-list">
               {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading budgets…</div>
                 : budgets.length === 0 ? <div className="empty-state compact"><strong>No budgets for this month yet</strong><span>Set a limit and keep an eye on your spending.</span></div>
-                  : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} onEdit={() => startBudgetEdit(budget)} onDelete={() => requestDelete('budget', budget)} />)}
+                  : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} isCurrentMonth={budgetMonth === currentMonth()} onEdit={() => startBudgetEdit(budget)} onDelete={() => requestDelete('budget', budget)} />)}
             </div>
             <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
               <h3>{editingBudgetId ? 'Edit budget' : 'Set a category limit'}</h3>
@@ -830,12 +830,17 @@ function RecurringCard({ item, onToggle, onDelete }) {
   </article>
 }
 
-function BudgetRow({ budget, onEdit, onDelete }) {
+function BudgetRow({ budget, isCurrentMonth, onEdit, onDelete }) {
   const spent = Number(budget.spent)
   const limit = Number(budget.monthlyLimit)
   const percent = limit > 0 ? (spent / limit) * 100 : 0
   const overBudget = percent > 100
   const progress = Math.min(percent, 100)
+  const currentDay = Number(todayInDhaka().slice(8, 10))
+  const daysInMonth = new Date(Number(budget.month.slice(0, 4)), Number(budget.month.slice(5, 7)), 0).getDate()
+  const projected = isCurrentMonth && currentDay >= 3 && spent > 0
+    ? Math.round((spent / currentDay) * daysInMonth * 100) / 100 : null
+  const projectedOver = projected !== null && projected > limit
   return <article className="budget-row">
     <div className="budget-row-top"><div><strong>{budget.category}</strong><span>{money.format(spent)} spent of {money.format(limit)}</span></div>
       <div className="budget-row-actions"><button type="button" onClick={onEdit} aria-label={`Edit ${budget.category} budget`}>Edit</button><button type="button" onClick={onDelete} aria-label={`Delete ${budget.category} budget`}>Delete</button></div>
@@ -844,6 +849,11 @@ function BudgetRow({ budget, onEdit, onDelete }) {
       <span className={overBudget ? 'over-budget' : ''} style={{ width: `${progress}%` }} />
     </div>
     <span className={overBudget ? 'budget-remaining over-budget' : 'budget-remaining'}>{overBudget ? `${money.format(Math.abs(Number(budget.remaining)))} over limit` : `${money.format(budget.remaining)} remaining`}</span>
+    {projected !== null && <span className={`budget-projection ${projectedOver ? 'projected-over' : ''}`}>
+      {projectedOver
+        ? `At this pace, month-end spending may reach ${money.format(projected)} (${money.format(projected - limit)} over).`
+        : `At this pace, month-end spending may reach ${money.format(projected)}.`}
+    </span>}
   </article>
 }
 
