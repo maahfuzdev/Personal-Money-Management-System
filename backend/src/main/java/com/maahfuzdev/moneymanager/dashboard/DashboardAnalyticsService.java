@@ -58,6 +58,10 @@ public class DashboardAnalyticsService {
         }
 
         MonthValues selected = valuesByMonth.getOrDefault(selectedMonth, new MonthValues());
+        BigDecimal previousExpense = valuesByMonth.getOrDefault(selectedMonth.minusMonths(1), new MonthValues()).expense;
+        BigDecimal expenseChangePercent = previousExpense.signum() == 0 ? null
+                : selected.expense.subtract(previousExpense).multiply(BigDecimal.valueOf(100))
+                        .divide(previousExpense, 1, RoundingMode.HALF_UP);
         List<Object[]> groupedExpenses = transactionRepository.summarizeExpensesByCategory(
                 userId, TransactionType.EXPENSE, selectedStart, end);
         BigDecimal totalExpense = groupedExpenses.stream().map(row -> (BigDecimal) row[1])
@@ -70,7 +74,8 @@ public class DashboardAnalyticsService {
                 .toList();
 
         return new DashboardAnalyticsResponse(selectedMonth.toString(), selected.income, selected.expense,
-                selected.income.subtract(selected.expense), List.copyOf(trend), categories);
+                selected.income.subtract(selected.expense), previousExpense, expenseChangePercent,
+                List.copyOf(trend), categories);
     }
 
     private static class MonthValues {

@@ -579,6 +579,13 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               <div><span>Expenses this month</span><strong className="expense-text">{money.format(analytics?.monthExpense || 0)}</strong></div>
               <div><span>Net cash flow</span><strong>{money.format(analytics?.monthBalance || 0)}</strong></div>
             </div>
+            {analytics && <div className={`month-comparison ${Number(analytics.expenseChangePercent) > 0 ? 'increased' : 'decreased'}`}>
+              {analytics.expenseChangePercent === null
+                ? 'Previous month had no expenses to compare.'
+                : <>{`Expenses ${Number(analytics.expenseChangePercent) > 0 ? 'increased' : Number(analytics.expenseChangePercent) < 0 ? 'decreased' : 'stayed level'} by `}
+                  <strong>{money.format(Math.abs(Number(analytics.monthExpense) - Number(analytics.previousMonthExpense)))}</strong>
+                  {` (${Math.abs(Number(analytics.expenseChangePercent))}%) vs the previous month.`}</>}
+            </div>}
             {isLoading ? <div className="empty-state chart-loading"><span className="loading-dot" /></div>
               : <CashFlowChart trend={analytics?.monthlyTrend || []} />}
           </article>

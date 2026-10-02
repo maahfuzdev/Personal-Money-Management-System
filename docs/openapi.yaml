@@ -613,6 +613,8 @@ components:
         monthIncome: { type: number }
         monthExpense: { type: number }
         monthBalance: { type: number }
+        previousMonthExpense: { type: number }
+        expenseChangePercent: { type: number, nullable: true, description: Null when the previous month had no expenses }
         monthlyTrend:
           type: array
           items:

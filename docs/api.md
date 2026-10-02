@@ -143,7 +143,7 @@ The create request accepts `type`, positive `amount`, `category`, optional `note
 
 ## Dashboard analytics
 
-`GET /api/v1/dashboard/analytics?month=2026-10` requires a bearer token. The `month` is optional and defaults to the current month. The response gives the selected month's income, expenses, and net balance; a six-month income/expense trend ending on the selected month; and that month's expense totals grouped by category. The endpoint only summarizes the signed-in account's data.
+`GET /api/v1/dashboard/analytics?month=2026-10` requires a bearer token. The `month` is optional and defaults to the current month. The response gives the selected month's income, expenses, and net balance; previous month's expenses and the percentage change (null if there is no previous-month baseline); a six-month income/expense trend ending on the selected month; and that month's expense totals grouped by category. The endpoint only summarizes the signed-in account's data.
 
 ```json
 {
