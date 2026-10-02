@@ -18,7 +18,7 @@ async function authorizedFetch(path, token, options = {}, allowRefresh = true) {
       ...options,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
         ...options.headers,
       },
     })
@@ -99,6 +99,16 @@ export async function exportTransactions(token, filters = {}) {
     throw error
   }
   return response.blob()
+}
+
+export function previewTransactionImport(token, file) {
+  const data = new FormData()
+  data.append('file', file)
+  return request('/transactions/import/preview', token, { method: 'POST', body: data })
+}
+
+export function importTransactions(token, transactions) {
+  return request('/transactions/import', token, { method: 'POST', body: JSON.stringify({ transactions }) })
 }
 
 export function getTransactionSummary(token) {

@@ -10,6 +10,7 @@ import com.maahfuzdev.moneymanager.goal.SavingsGoalNotFoundException;
 import com.maahfuzdev.moneymanager.dashboard.AnalyticsAccountNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.InvalidTransactionDateRangeException;
+import com.maahfuzdev.moneymanager.transaction.InvalidTransactionCsvException;
 import com.maahfuzdev.moneymanager.transaction.TransactionExportTooLargeException;
 import com.maahfuzdev.moneymanager.recurring.InvalidRecurringDateException;
 import com.maahfuzdev.moneymanager.recurring.RecurringTransactionNotFoundException;
@@ -70,6 +71,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidTransactionDateRangeException.class)
     ResponseEntity<ApiError> invalidTransactionDateRange(HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "Start date must be on or before end date.", request, Map.of());
+    }
+
+    @ExceptionHandler(InvalidTransactionCsvException.class)
+    ResponseEntity<ApiError> invalidTransactionCsv(InvalidTransactionCsvException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(BudgetNotFoundException.class)

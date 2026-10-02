@@ -38,6 +38,14 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
 
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);
 
+    @Query("select count(t) > 0 from MoneyTransaction t where t.user.id = :userId " +
+            "and t.transactionDate = :date and t.type = :type and t.amount = :amount " +
+            "and lower(t.category) = lower(:category) " +
+            "and ((:note is null and t.note is null) or t.note = :note)")
+    boolean existsDuplicate(@Param("userId") Long userId, @Param("date") LocalDate date,
+                            @Param("type") TransactionType type, @Param("amount") BigDecimal amount,
+                            @Param("category") String category, @Param("note") String note);
+
     @Query("select coalesce(sum(t.amount), 0) from MoneyTransaction t where t.user.id = :userId and t.type = :type")
     BigDecimal sumAmountByUserAndType(@Param("userId") Long userId, @Param("type") TransactionType type);
 

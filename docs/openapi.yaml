@@ -212,6 +212,38 @@ paths:
               schema: { type: string, format: binary }
         '400': { $ref: '#/components/responses/BadRequest' }
         '413': { description: Export exceeds the row limit }
+  /api/v1/transactions/import/preview:
+    post:
+      tags: [Transactions]
+      summary: Validate a CSV and preview duplicate and invalid rows
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: CSV up to 1 MiB, at most 1,000 data rows }
+      responses:
+        '200': { description: Row-by-row preview and summary counts }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/transactions/import:
+    post:
+      tags: [Transactions]
+      summary: Import validated transactions, skipping duplicates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactions]
+              properties:
+                transactions: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/TransactionRequest' } }
+      responses:
+        '200': { description: Imported and duplicate counts }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /api/v1/budgets:
     get:
       tags: [Budgets]

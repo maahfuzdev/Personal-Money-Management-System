@@ -403,6 +403,21 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .export-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce9df; border-radius: 8px; background: #f4faf5; color: #2e7148; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .export-button:hover:not(:disabled) { background: #eaf5ed; }
 .export-button:disabled { color: #a1afa5; cursor: default; }
+.import-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce4f0; border-radius: 8px; background: #f4f7fc; color: #385b94; cursor: pointer; display: inline-flex; align-items: center; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.import-button:hover { background: #eaf0fa; }
+.import-button input { display: none; }
+.import-preview { width: 100%; padding: 14px; border: 1px solid #e4eaf0; border-radius: 12px; background: #fbfcfe; }
+.import-preview-heading, .import-preview-heading > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.import-preview-heading > div { justify-content: flex-start; flex-wrap: wrap; }
+.import-preview-heading span, .import-preview > p { color: #718096; font-size: 12px; }
+.import-preview-heading button { border: 0; background: transparent; color: #607086; cursor: pointer; }
+.import-preview-rows { max-height: 240px; overflow: auto; margin: 10px 0; border-top: 1px solid #e8edf3; }
+.import-preview-row { display: grid; grid-template-columns: 54px minmax(120px, 1fr) minmax(120px, 0.8fr); gap: 10px; padding: 8px 4px; border-bottom: 1px solid #edf0f4; font-size: 11px; }
+.import-preview-row > span:first-child { color: #8290a0; }
+.import-preview-row strong.ready { color: #2e7148; }
+.import-preview-row strong.duplicate { color: #9b6a14; }
+.import-preview-row strong.invalid { color: #ad4646; }
+.import-confirm { width: auto; min-height: 38px; padding: 0 14px; }
 .clear-filters { min-height: 34px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #6f7d74; cursor: pointer; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .clear-filters:hover:not(:disabled) { border-color: #e5ebe6; background: #f7f9f7; color: #236744; }
 .clear-filters:disabled { color: #aab3ac; cursor: default; }

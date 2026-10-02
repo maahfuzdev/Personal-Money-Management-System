@@ -9,6 +9,8 @@ import {
   deleteBudget,
   deleteTransaction,
   exportTransactions,
+  previewTransactionImport,
+  importTransactions,
   getBudgets,
   getCategorySuggestions,
   getDashboardAnalytics,
@@ -78,6 +80,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [transactionPage, setTransactionPage] = useState(0)
   const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
   const [isExporting, setIsExporting] = useState(false)
+  const [importPreview, setImportPreview] = useState(null)
+  const [importError, setImportError] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
   const [budgets, setBudgets] = useState([])
   const [budgetForm, setBudgetForm] = useState(emptyBudget)
   const [budgetMonth, setBudgetMonth] = useState(currentMonth())
@@ -248,6 +253,29 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setImportError(''); setImportPreview(null); setIsImporting(true)
+    try { setImportPreview(await previewTransactionImport(session.token, file)) }
+    catch (error) { setImportError(error.message) }
+    finally { setIsImporting(false) }
+  }
+
+  async function handleImportConfirm() {
+    const validRows = importPreview?.rows.filter((row) => row.transaction && !row.duplicate && row.errors.length === 0) || []
+    if (!validRows.length) return
+    setIsImporting(true); setImportError('')
+    try {
+      const result = await importTransactions(session.token, validRows.map((row) => row.transaction))
+      setSuccessMessage(`${result.importedCount} transaction${result.importedCount === 1 ? '' : 's'} imported${result.duplicateCount ? `; ${result.duplicateCount} duplicate${result.duplicateCount === 1 ? '' : 's'} skipped` : ''}.`)
+      setImportPreview(null)
+      await loadDashboard()
+    } catch (error) { setImportError(error.message) }
+    finally { setIsImporting(false) }
   }
 
   function startEdit(transaction) {
@@ -577,11 +605,25 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                   disabled={isExporting || hasInvalidDateRange || transactionPageInfo.totalItems === 0}>
                   {isExporting ? 'Preparing…' : 'Export CSV'}
                 </button>
+                <label className="import-button">{isImporting && !importPreview ? 'Reading…' : 'Import CSV'}
+                  <input type="file" accept=".csv,text/csv" onChange={handleImportFile} disabled={isImporting} />
+                </label>
                 <button className="clear-filters" type="button" onClick={clearTransactionFilters} disabled={activeFilterCount === 0}>
                   Clear filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                 </button>
               </div>
             </div>
+            {(importPreview || importError) && <section className="import-preview" aria-live="polite">
+              <div className="import-preview-heading"><div><strong>CSV import preview</strong>{importPreview && <span>{importPreview.validCount} ready · {importPreview.duplicateCount} duplicate · {importPreview.invalidCount} invalid</span>}</div>
+                <button type="button" onClick={() => { setImportPreview(null); setImportError('') }}>Close</button></div>
+              {importError && <p className="form-alert" role="alert">{importError}</p>}
+              {importPreview && <><div className="import-preview-rows">{importPreview.rows.slice(0, 100).map((row) => <div className="import-preview-row" key={row.rowNumber}>
+                <span>Row {row.rowNumber}</span><span>{row.date} · {row.type} · {row.category} · ৳{row.amount}</span>
+                <strong className={row.errors.length ? 'invalid' : row.duplicate ? 'duplicate' : 'ready'}>{row.errors.join(' ') || (row.duplicate ? 'Duplicate' : 'Ready')}</strong>
+              </div>)}</div>{importPreview.rows.length > 100 && <p>Showing first 100 of {importPreview.rows.length} rows.</p>}
+                <button className="submit-button import-confirm" type="button" disabled={isImporting || importPreview.validCount === 0} onClick={handleImportConfirm}>
+                  {isImporting ? 'Importing…' : `Import ${importPreview.validCount} transaction${importPreview.validCount === 1 ? '' : 's'}`}</button></>}
+            </section>}
             {hasInvalidDateRange && <div className="filter-warning" role="status">Choose a start date that is on or before the end date. CSV export is unavailable until the range is corrected.</div>}
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>
               : transactions.length === 0 ? <div className="empty-state"><span className="empty-icon">⌁</span>

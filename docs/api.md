@@ -28,6 +28,8 @@ Application endpoints use `/api/v1`. The browser client receives the API base UR
 
 ## Transactions
 
+`POST /transactions/import/preview` accepts multipart field `file` (CSV, up to 1 MiB and 1,000 data rows). It requires the export header `Date,Type,Category,Note,Amount (BDT)` and returns row errors, duplicate status, and importable transaction values. `POST /transactions/import` accepts `{ "transactions": [...] }` with at most 1,000 validated transaction records; existing and repeated rows are skipped and counted in the result.
+
 All transaction endpoints require `Authorization: Bearer <accessToken>`. Each request is scoped to the signed-in account; clients do not send a user ID. A transaction belonging to another account is reported as not found.
 
 ### List transactions

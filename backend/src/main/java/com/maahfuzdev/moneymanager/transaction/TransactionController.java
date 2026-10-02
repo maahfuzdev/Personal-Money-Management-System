@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -67,6 +69,22 @@ public class TransactionController {
                         org.springframework.http.ContentDisposition.attachment()
                                 .filename("transactions.csv", StandardCharsets.UTF_8).build().toString())
                 .body(csv);
+    }
+
+    @PostMapping(value = "/import/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public TransactionImportPreviewResponse previewImport(@AuthenticationPrincipal Jwt jwt,
+            @RequestPart("file") MultipartFile file) {
+        if (file.isEmpty() || file.getSize() > 1_048_576) throw new InvalidTransactionCsvException("Choose a CSV file smaller than 1 MB.");
+        if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".csv"))
+            throw new InvalidTransactionCsvException("Choose a .csv file.");
+        try { return transactionService.previewCsv(jwt.getSubject(), file.getBytes()); }
+        catch (java.io.IOException ex) { throw new InvalidTransactionCsvException("Could not read the CSV file."); }
+    }
+
+    @PostMapping("/import")
+    public TransactionImportResult importTransactions(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody TransactionImportRequest request) {
+        return transactionService.importTransactions(jwt.getSubject(), request.transactions());
     }
 
     @PostMapping
