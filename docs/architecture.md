@@ -20,7 +20,7 @@ Backend code will be grouped by feature. Each feature keeps its HTTP controller,
 
 ## Frontend boundaries
 
-The React app will keep pages, shared components, API clients, and styling in separate folders. Components should work at narrow mobile widths first, then adapt to tablet and desktop. Forms will provide labels, validation feedback, loading states, and clear success/error messages.
+The React app keeps account access and the signed-in dashboard in feature folders, with API clients and styling separate. The dashboard supports responsive transaction list, filters, entry, editing, deletion, and totals. Forms provide labels, browser/server validation, loading states, and clear errors.
 
 ## Data and configuration
 
@@ -32,7 +32,7 @@ The React app will keep pages, shared components, API clients, and styling in se
 
 ## Authentication
 
-The API hashes account passwords with Spring Security's PBKDF2 encoder and issues 15-minute HMAC-signed bearer access tokens. The signing key is supplied as `JWT_SECRET` and must contain at least 32 random bytes after Base64 decoding. The React app will keep access tokens in memory and send them in the `Authorization` header. Refresh-token support is a separate follow-up before production use.
+The API hashes account passwords with Spring Security's PBKDF2 encoder and issues 15-minute HMAC-signed bearer access tokens. The signing key is supplied as `JWT_SECRET` and must contain at least 32 random bytes after Base64 decoding. The React app keeps access tokens in memory and sends them in the `Authorization` header. Refresh-token support is a separate follow-up before production use.
 
 ## API conventions
 

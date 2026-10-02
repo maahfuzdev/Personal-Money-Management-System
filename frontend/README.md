@@ -22,3 +22,9 @@ npm run build
 ```
 
 The production output is written to `dist/` and can be deployed as a static site.
+
+## Finance dashboard
+
+After signing in or registering, the dashboard loads the signed-in user's transaction list and all-time income, expense, and balance totals. Use the transaction form to add income or expenses, and the Edit/Delete actions on each row to maintain the list. Amounts are shown in Bangladeshi taka (BDT).
+
+The access token stays in React memory and is sent as a bearer token for API requests. It is cleared when you sign out or reload the page, so sign in again after a reload. The dashboard signs out automatically if the API reports that the token has expired.
