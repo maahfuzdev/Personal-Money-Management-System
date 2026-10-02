@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createTransaction,
   createBudget,
@@ -59,6 +59,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isSaving, setIsSaving] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const isConfirmingDeleteRef = useRef(false)
   const [filter, setFilter] = useState('ALL')
   const [searchDraft, setSearchDraft] = useState('')
   const [search, setSearch] = useState('')
@@ -145,6 +148,34 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     return () => window.clearTimeout(timer)
   }, [successMessage])
 
+  useEffect(() => {
+    if (!deleteTarget) return undefined
+    const previouslyFocused = document.activeElement
+    const dialog = document.querySelector('[data-confirm-dialog]')
+    const actions = dialog?.querySelectorAll('button:not(:disabled)')
+    actions?.[0]?.focus()
+    function handleDialogKeydown(event) {
+      if (event.key === 'Escape' && !isConfirmingDeleteRef.current) setDeleteTarget(null)
+      if (event.key !== 'Tab') return
+      const currentActions = dialog?.querySelectorAll('button:not(:disabled)')
+      if (!currentActions?.length) return
+      const first = currentActions[0]
+      const last = currentActions[currentActions.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', handleDialogKeydown)
+    return () => {
+      window.removeEventListener('keydown', handleDialogKeydown)
+      previouslyFocused?.focus?.()
+    }
+  }, [deleteTarget])
+
   function changeTransactionFilter(value) {
     setFilter(value)
     setTransactionPage(0)
@@ -157,6 +188,25 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setStartDate('')
     setEndDate('')
     setTransactionPage(0)
+  }
+
+  function requestDelete(kind, item) {
+    setDeleteTarget({ kind, item })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || isConfirmingDelete) return
+    isConfirmingDeleteRef.current = true
+    setIsConfirmingDelete(true)
+    try {
+      if (deleteTarget.kind === 'transaction') await handleDelete(deleteTarget.item)
+      if (deleteTarget.kind === 'budget') await handleBudgetDelete(deleteTarget.item)
+      if (deleteTarget.kind === 'goal') await handleGoalDelete(deleteTarget.item)
+      setDeleteTarget(null)
+    } finally {
+      isConfirmingDeleteRef.current = false
+      setIsConfirmingDelete(false)
+    }
   }
 
   async function handleExport() {
@@ -230,7 +280,6 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }
 
   async function handleDelete(transaction) {
-    if (!window.confirm(`Delete this ${transaction.type.toLowerCase()} of ${money.format(transaction.amount)}?`)) return
     setSuccessMessage('')
     try {
       await deleteTransaction(session.token, transaction.id)
@@ -283,7 +332,6 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }
 
   async function handleBudgetDelete(budget) {
-    if (!window.confirm(`Delete the ${budget.category} budget for ${budget.month}?`)) return
     setSuccessMessage('')
     try {
       await deleteBudget(session.token, budget.id)
@@ -343,7 +391,6 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }
 
   async function handleGoalDelete(goal) {
-    if (!window.confirm(`Delete the “${goal.name}” savings goal?`)) return
     setSuccessMessage('')
     try {
       await deleteGoal(session.token, goal.id)
@@ -476,7 +523,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <span>{search ? 'No transactions match that search. Try another word or clear the search.' : filter === 'ALL' ? 'Add a transaction to see where your money goes.' : 'Try another filter or add a transaction.'}</span>
               </div> : <div className="transaction-list">
                 {transactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction}
-                  onEdit={() => startEdit(transaction)} onDelete={() => handleDelete(transaction)} />)}
+                  onEdit={() => startEdit(transaction)} onDelete={() => requestDelete('transaction', transaction)} />)}
               </div>}
             {!isLoading && transactionPageInfo.totalItems > 0 && <div className="transaction-pagination">
               <span>Showing {transactionPage * transactionPageInfo.size + 1}–{Math.min((transactionPage + 1) * transactionPageInfo.size, transactionPageInfo.totalItems)} of {transactionPageInfo.totalItems}</span>
@@ -521,7 +568,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             <div className="budget-list">
               {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading budgets…</div>
                 : budgets.length === 0 ? <div className="empty-state compact"><strong>No budgets for this month yet</strong><span>Set a limit and keep an eye on your spending.</span></div>
-                  : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} onEdit={() => startBudgetEdit(budget)} onDelete={() => handleBudgetDelete(budget)} />)}
+                  : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} onEdit={() => startBudgetEdit(budget)} onDelete={() => requestDelete('budget', budget)} />)}
             </div>
             <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
               <h3>{editingBudgetId ? 'Edit budget' : 'Set a category limit'}</h3>
@@ -543,7 +590,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             <div className="goal-grid">
               {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading goals…</div>
                 : goals.length === 0 ? <div className="empty-state compact"><span className="empty-icon">☆</span><strong>Give your savings a purpose</strong><span>Create a goal and celebrate each step forward.</span></div>
-                  : goals.map((goal) => <GoalCard key={goal.id} goal={goal} onEdit={() => startGoalEdit(goal)} onDelete={() => handleGoalDelete(goal)} />)}
+                : goals.map((goal) => <GoalCard key={goal.id} goal={goal} onEdit={() => startGoalEdit(goal)} onDelete={() => requestDelete('goal', goal)} />)}
             </div>
             <form id="goal-form" className="goal-form" onSubmit={handleGoalSubmit}>
               <h3>{editingGoalId ? 'Edit savings goal' : 'Create a goal'}</h3>
@@ -561,6 +608,24 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           </div>
         </section>}
         {route === '/reports' && <div className="report-note"><span aria-hidden="true">i</span><p>Reports use the transactions recorded in your account. Choose a month above to compare cash flow and category spending.</p></div>}
+        {deleteTarget && <div className="confirm-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !isConfirmingDelete) setDeleteTarget(null)
+        }}>
+          <section className="confirm-dialog" data-confirm-dialog role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+            <span className="confirm-icon" aria-hidden="true">!</span>
+            <p className="eyebrow">PLEASE CONFIRM</p>
+            <h2 id="confirm-title">Delete {deleteTarget.kind === 'goal' ? 'savings goal' : deleteTarget.kind}?</h2>
+            <p id="confirm-description">{deleteTarget.kind === 'transaction'
+              ? `This will permanently delete the ${deleteTarget.item.type.toLowerCase()} of ${money.format(deleteTarget.item.amount)} in ${deleteTarget.item.category}.`
+              : deleteTarget.kind === 'budget'
+                ? `This will permanently delete the ${deleteTarget.item.category} budget for ${formatMonth(deleteTarget.item.month)}.`
+                : `This will permanently delete “${deleteTarget.item.name}” and its savings progress.`}</p>
+            <div className="confirm-actions">
+              <button className="confirm-cancel" data-confirm-cancel type="button" disabled={isConfirmingDelete} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="confirm-delete" type="button" aria-busy={isConfirmingDelete} onClick={confirmDelete}>{isConfirmingDelete ? 'Deleting…' : 'Delete'}</button>
+            </div>
+          </section>
+        </div>}
         <datalist id="category-suggestions-INCOME">{categorySuggestions.INCOME.map((category) => <option key={category} value={category} />)}</datalist>
         <datalist id="category-suggestions-EXPENSE">{categorySuggestions.EXPENSE.map((category) => <option key={category} value={category} />)}</datalist>
         </main>
