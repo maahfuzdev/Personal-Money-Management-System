@@ -4,6 +4,8 @@ import com.maahfuzdev.moneymanager.auth.EmailAlreadyRegisteredException;
 import com.maahfuzdev.moneymanager.auth.InvalidCredentialsException;
 import com.maahfuzdev.moneymanager.budget.BudgetAlreadyExistsException;
 import com.maahfuzdev.moneymanager.budget.BudgetNotFoundException;
+import com.maahfuzdev.moneymanager.goal.SavingsGoalAmountException;
+import com.maahfuzdev.moneymanager.goal.SavingsGoalNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -60,6 +62,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<ApiError> constraintViolation(HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "Please check the submitted fields.", request, Map.of());
+    }
+
+    @ExceptionHandler(SavingsGoalNotFoundException.class)
+    ResponseEntity<ApiError> savingsGoalNotFound(HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Savings goal not found.", request, Map.of());
+    }
+
+    @ExceptionHandler(SavingsGoalAmountException.class)
+    ResponseEntity<ApiError> savingsGoalAmount(HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Current savings cannot be greater than the target amount.", request, Map.of());
     }
 
     private ResponseEntity<ApiError> error(

@@ -60,3 +60,19 @@ export function updateBudget(token, id, budget) {
 export function deleteBudget(token, id) {
   return request(`/budgets/${id}`, token, { method: 'DELETE' })
 }
+
+export function getGoals(token) {
+  return request('/goals', token)
+}
+
+export function createGoal(token, goal) {
+  return request('/goals', token, { method: 'POST', body: JSON.stringify(goal) })
+}
+
+export function updateGoal(token, id, goal) {
+  return request(`/goals/${id}`, token, { method: 'PUT', body: JSON.stringify(goal) })
+}
+
+export function deleteGoal(token, id) {
+  return request(`/goals/${id}`, token, { method: 'DELETE' })
+}

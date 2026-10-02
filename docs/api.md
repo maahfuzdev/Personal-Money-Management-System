@@ -20,7 +20,7 @@ All application endpoints will use `/api/v1`. The browser client receives the AP
 | `/auth` | Register and sign in | Implemented |
 | `/transactions` | Manage income and expenses | Implemented |
 | `/budgets` | Set and review monthly spending budgets | Implemented |
-| `/goals` | Track savings goals | Planned |
+| `/goals` | Track savings goals | Implemented |
 | `/dashboard` | Return summary totals and trends | Planned |
 
 ## Transactions
@@ -81,6 +81,27 @@ List and write responses include the calculated `spent` and `remaining` values f
   "category": "Food",
   "monthlyLimit": 12000.00,
   "month": "2026-10"
+}
+```
+
+## Savings goals
+
+All goal endpoints require a bearer access token and only return goals belonging to the signed-in account.
+
+- `GET /api/v1/goals` lists the account's goals.
+- `POST /api/v1/goals` creates a goal.
+- `PUT /api/v1/goals/{id}` updates a goal.
+- `DELETE /api/v1/goals/{id}` removes a goal and returns `204 No Content`.
+
+Goal requests contain a `name`, positive `targetAmount`, non-negative `currentAmount`, optional `targetDate` (`YYYY-MM-DD`), and optional `note`. Current savings cannot exceed the target. Responses also include `remainingAmount`, `completionPercent` (capped at 100), and `completed`.
+
+```json
+{
+  "name": "Emergency fund",
+  "targetAmount": 100000.00,
+  "currentAmount": 25000.00,
+  "targetDate": "2027-06-30",
+  "note": "Build a six-month cushion"
 }
 ```
 

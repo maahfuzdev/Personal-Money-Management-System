@@ -2,13 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createTransaction,
   createBudget,
+  createGoal,
+  deleteGoal,
   deleteBudget,
   deleteTransaction,
   getBudgets,
+  getGoals,
   getTransactionSummary,
   getTransactions,
   updateTransaction,
   updateBudget,
+  updateGoal,
 } from '../../api/transactionApi.js'
 
 const currentMonth = () => {
@@ -19,6 +23,7 @@ const emptyForm = () => ({
   type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
 })
 const emptyBudget = () => ({ category: '', monthlyLimit: '', month: currentMonth() })
+const emptyGoal = () => ({ name: '', targetAmount: '', currentAmount: '0', targetDate: '', note: '' })
 
 const money = new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 })
 const dateLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -39,18 +44,25 @@ function Dashboard({ session, onSignOut }) {
   const [editingBudgetId, setEditingBudgetId] = useState(null)
   const [budgetError, setBudgetError] = useState('')
   const [isSavingBudget, setIsSavingBudget] = useState(false)
+  const [goals, setGoals] = useState([])
+  const [goalForm, setGoalForm] = useState(emptyGoal)
+  const [editingGoalId, setEditingGoalId] = useState(null)
+  const [goalError, setGoalError] = useState('')
+  const [isSavingGoal, setIsSavingGoal] = useState(false)
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [items, totals, monthlyBudgets] = await Promise.all([
+      const [items, totals, monthlyBudgets, savingsGoals] = await Promise.all([
         getTransactions(session.token),
         getTransactionSummary(session.token),
         getBudgets(session.token, selectedMonth),
+        getGoals(session.token),
       ])
       setTransactions(items)
       setSummary(totals)
       setBudgets(monthlyBudgets)
+      setGoals(savingsGoals)
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
@@ -150,6 +162,61 @@ function Dashboard({ session, onSignOut }) {
     if (!window.confirm(`Delete the ${budget.category} budget for ${budget.month}?`)) return
     try {
       await deleteBudget(session.token, budget.id)
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    }
+  }
+
+  function startGoalEdit(goal) {
+    setEditingGoalId(goal.id)
+    setGoalForm({
+      name: goal.name,
+      targetAmount: String(goal.targetAmount),
+      currentAmount: String(goal.currentAmount),
+      targetDate: goal.targetDate || '',
+      note: goal.note || '',
+    })
+    setGoalError('')
+    document.querySelector('#goal-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function cancelGoalEdit() {
+    setEditingGoalId(null)
+    setGoalForm(emptyGoal())
+    setGoalError('')
+  }
+
+  async function handleGoalSubmit(event) {
+    event.preventDefault()
+    setGoalError('')
+    setIsSavingGoal(true)
+    const payload = {
+      ...goalForm,
+      name: goalForm.name.trim(),
+      targetAmount: Number(goalForm.targetAmount),
+      currentAmount: Number(goalForm.currentAmount),
+      targetDate: goalForm.targetDate || null,
+      note: goalForm.note.trim() || null,
+    }
+    try {
+      if (editingGoalId) await updateGoal(session.token, editingGoalId, payload)
+      else await createGoal(session.token, payload)
+      cancelGoalEdit()
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setGoalError(error.message)
+    } finally {
+      setIsSavingGoal(false)
+    }
+  }
+
+  async function handleGoalDelete(goal) {
+    if (!window.confirm(`Delete the “${goal.name}” savings goal?`)) return
+    try {
+      await deleteGoal(session.token, goal.id)
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -257,6 +324,32 @@ function Dashboard({ session, onSignOut }) {
             </form>
           </div>
         </section>
+
+        <section className="panel goals-panel" aria-labelledby="goals-heading">
+          <div className="panel-heading"><div><p className="eyebrow">MAKE IT HAPPEN</p><h2 id="goals-heading">Savings goals</h2></div>
+            <span className="goals-count">{goals.filter((goal) => goal.completed).length} of {goals.length} complete</span>
+          </div>
+          <div className="goals-layout">
+            <div className="goal-grid">
+              {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading goals…</div>
+                : goals.length === 0 ? <div className="empty-state compact"><span className="empty-icon">☆</span><strong>Give your savings a purpose</strong><span>Create a goal and celebrate each step forward.</span></div>
+                  : goals.map((goal) => <GoalCard key={goal.id} goal={goal} onEdit={() => startGoalEdit(goal)} onDelete={() => handleGoalDelete(goal)} />)}
+            </div>
+            <form id="goal-form" className="goal-form" onSubmit={handleGoalSubmit}>
+              <h3>{editingGoalId ? 'Edit savings goal' : 'Create a goal'}</h3>
+              {goalError && <div className="form-alert" role="alert">{goalError}</div>}
+              <label className="form-field"><span>Goal name</span><input required maxLength="100" placeholder="e.g. New laptop" value={goalForm.name} onChange={(event) => setGoalForm({ ...goalForm, name: event.target.value })} /></label>
+              <div className="goal-amount-fields">
+                <label className="form-field"><span>Target <small>(BDT)</small></span><input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={goalForm.targetAmount} onChange={(event) => setGoalForm({ ...goalForm, targetAmount: event.target.value })} /></label>
+                <label className="form-field"><span>Saved so far <small>(BDT)</small></span><input required min="0" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={goalForm.currentAmount} onChange={(event) => setGoalForm({ ...goalForm, currentAmount: event.target.value })} /></label>
+              </div>
+              <label className="form-field"><span>Target date <small>(optional)</small></span><input type="date" value={goalForm.targetDate} onChange={(event) => setGoalForm({ ...goalForm, targetDate: event.target.value })} /></label>
+              <label className="form-field"><span>Note <small>(optional)</small></span><input maxLength="300" placeholder="Why is this important to you?" value={goalForm.note} onChange={(event) => setGoalForm({ ...goalForm, note: event.target.value })} /></label>
+              <button className="submit-button" type="submit" disabled={isSavingGoal}>{isSavingGoal ? 'Saving…' : editingGoalId ? 'Save changes' : 'Create savings goal'}<span aria-hidden="true">→</span></button>
+              {editingGoalId && <button className="cancel-edit" type="button" onClick={cancelGoalEdit}>Cancel editing</button>}
+            </form>
+          </div>
+        </section>
         <footer className="dashboard-footer">Your financial space, thoughtfully organized.</footer>
       </div>
     </main>
@@ -292,6 +385,19 @@ function BudgetRow({ budget, onEdit, onDelete }) {
       <span className={overBudget ? 'over-budget' : ''} style={{ width: `${progress}%` }} />
     </div>
     <span className={overBudget ? 'budget-remaining over-budget' : 'budget-remaining'}>{overBudget ? `${money.format(Math.abs(Number(budget.remaining)))} over limit` : `${money.format(budget.remaining)} remaining`}</span>
+  </article>
+}
+
+function GoalCard({ goal, onEdit, onDelete }) {
+  const progress = Number(goal.completionPercent)
+  return <article className={`goal-card ${goal.completed ? 'completed' : ''}`}>
+    <div className="goal-card-heading"><span className="goal-badge" aria-hidden="true">{goal.completed ? '✓' : '☆'}</span>
+      <div className="goal-card-title"><strong>{goal.name}</strong><span>{goal.targetDate ? `Target ${dateLabel.format(new Date(`${goal.targetDate}T00:00:00`))}` : 'No target date'}</span></div>
+      <div className="goal-row-actions"><button type="button" onClick={onEdit} aria-label={`Edit ${goal.name} goal`}>Edit</button><button type="button" onClick={onDelete} aria-label={`Delete ${goal.name} goal`}>Delete</button></div>
+    </div>
+    <div className="goal-values"><strong>{money.format(goal.currentAmount)}</strong><span>of {money.format(goal.targetAmount)}</span><b>{progress}%</b></div>
+    <div className="goal-progress" role="progressbar" aria-label={`${goal.name} savings progress`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}><span style={{ width: `${progress}%` }} /></div>
+    <div className="goal-card-bottom"><span>{goal.note || (goal.completed ? 'You reached your goal!' : 'Every little bit adds up.')}</span><strong>{goal.completed ? 'Completed' : `${money.format(goal.remainingAmount)} to go`}</strong></div>
   </article>
 }
 
