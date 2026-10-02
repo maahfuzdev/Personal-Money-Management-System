@@ -377,6 +377,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .export-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce9df; border-radius: 8px; background: #f4faf5; color: #2e7148; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .export-button:hover:not(:disabled) { background: #eaf5ed; }
 .export-button:disabled { color: #a1afa5; cursor: default; }
+.clear-filters { min-height: 34px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #6f7d74; cursor: pointer; font-size: 9px; font-weight: 600; white-space: nowrap; }
+.clear-filters:hover:not(:disabled) { border-color: #e5ebe6; background: #f7f9f7; color: #236744; }
+.clear-filters:disabled { color: #aab3ac; cursor: default; }
 
 @media (max-width: 820px) {
   .dashboard-content { width: min(100% - 36px, 680px); padding-top: 35px; }

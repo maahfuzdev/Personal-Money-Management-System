@@ -79,6 +79,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
+  const activeFilterCount = [filter !== 'ALL', Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
@@ -138,6 +139,15 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   function changeTransactionFilter(value) {
     setFilter(value)
+    setTransactionPage(0)
+  }
+
+  function clearTransactionFilters() {
+    setFilter('ALL')
+    setSearchDraft('')
+    setSearch('')
+    setStartDate('')
+    setEndDate('')
     setTransactionPage(0)
   }
 
@@ -426,6 +436,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <button className="export-button" type="button" onClick={handleExport}
                   disabled={isExporting || transactionPageInfo.totalItems === 0}>
                   {isExporting ? 'Preparing…' : 'Export CSV'}
+                </button>
+                <button className="clear-filters" type="button" onClick={clearTransactionFilters} disabled={activeFilterCount === 0}>
+                  Clear filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                 </button>
               </div>
             </div>
