@@ -8,6 +8,7 @@ import {
   deleteTransaction,
   exportTransactions,
   getBudgets,
+  getCategorySuggestions,
   getDashboardAnalytics,
   getGoals,
   getTransactionSummary,
@@ -59,6 +60,7 @@ function Dashboard({ session, onSignOut }) {
   const [goalError, setGoalError] = useState('')
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [analytics, setAnalytics] = useState(null)
+  const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
@@ -94,6 +96,19 @@ function Dashboard({ session, onSignOut }) {
   }, [budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
+
+  useEffect(() => {
+    let isCurrent = true
+    Promise.all([
+      getCategorySuggestions(session.token, 'INCOME'),
+      getCategorySuggestions(session.token, 'EXPENSE'),
+    ]).then(([income, expense]) => {
+      if (isCurrent) setCategorySuggestions({ INCOME: income, EXPENSE: expense })
+    }).catch((error) => {
+      if (isCurrent && error.status === 401) onSignOut()
+    })
+    return () => { isCurrent = false }
+  }, [onSignOut, session.token])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -161,6 +176,10 @@ function Dashboard({ session, onSignOut }) {
     try {
       if (editingId) await updateTransaction(session.token, editingId, payload)
       else await createTransaction(session.token, payload)
+      setCategorySuggestions((current) => ({
+        ...current,
+        [payload.type]: [...new Set([...current[payload.type], payload.category])].sort((a, b) => a.localeCompare(b)),
+      }))
       cancelEdit()
       await loadDashboard()
     } catch (error) {
@@ -203,6 +222,10 @@ function Dashboard({ session, onSignOut }) {
     try {
       if (editingBudgetId) await updateBudget(session.token, editingBudgetId, payload)
       else await createBudget(session.token, payload)
+      setCategorySuggestions((current) => ({
+        ...current,
+        EXPENSE: [...new Set([...current.EXPENSE, payload.category])].sort((a, b) => a.localeCompare(b)),
+      }))
       setBudgetMonth(payload.month)
       setEditingBudgetId(null)
       setBudgetForm({ ...emptyBudget(), month: payload.month })
@@ -391,7 +414,7 @@ function Dashboard({ session, onSignOut }) {
                 <input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
               </label>
               <label className="form-field"><span>Category</span>
-                <input required maxLength="60" placeholder={form.type === 'INCOME' ? 'e.g. Salary' : 'e.g. Groceries'} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+                <input required list={`category-suggestions-${form.type}`} maxLength="60" placeholder={form.type === 'INCOME' ? 'e.g. Salary' : 'e.g. Groceries'} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
               </label>
               <label className="form-field"><span>Date</span>
                 <input required type="date" value={form.transactionDate} onChange={(event) => setForm({ ...form, transactionDate: event.target.value })} />
@@ -418,7 +441,7 @@ function Dashboard({ session, onSignOut }) {
             <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
               <h3>{editingBudgetId ? 'Edit budget' : 'Set a category limit'}</h3>
               {budgetError && <div className="form-alert" role="alert">{budgetError}</div>}
-              <label className="form-field"><span>Category</span><input required maxLength="60" placeholder="e.g. Food" value={budgetForm.category} onChange={(event) => setBudgetForm({ ...budgetForm, category: event.target.value })} /></label>
+              <label className="form-field"><span>Category</span><input required list="category-suggestions-EXPENSE" maxLength="60" placeholder="e.g. Food" value={budgetForm.category} onChange={(event) => setBudgetForm({ ...budgetForm, category: event.target.value })} /></label>
               <label className="form-field"><span>Monthly limit <small>(BDT)</small></span><input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={budgetForm.monthlyLimit} onChange={(event) => setBudgetForm({ ...budgetForm, monthlyLimit: event.target.value })} /></label>
               <label className="form-field"><span>Month</span><input required type="month" value={budgetForm.month} onChange={(event) => setBudgetForm({ ...budgetForm, month: event.target.value })} /></label>
               <button className="submit-button" type="submit" disabled={isSavingBudget}>{isSavingBudget ? 'Saving…' : editingBudgetId ? 'Save budget' : 'Create budget'}<span aria-hidden="true">→</span></button>
@@ -452,6 +475,8 @@ function Dashboard({ session, onSignOut }) {
             </form>
           </div>
         </section>
+        <datalist id="category-suggestions-INCOME">{categorySuggestions.INCOME.map((category) => <option key={category} value={category} />)}</datalist>
+        <datalist id="category-suggestions-EXPENSE">{categorySuggestions.EXPENSE.map((category) => <option key={category} value={category} />)}</datalist>
         <footer className="dashboard-footer">Your financial space, thoughtfully organized.</footer>
       </div>
     </main>

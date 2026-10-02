@@ -35,6 +35,8 @@ All transaction endpoints require `Authorization: Bearer <accessToken>`. Each re
 
 If more than 10,000 rows match, the export endpoint returns `413 Content Too Large`; narrow the date range or other filters and retry.
 
+`GET /api/v1/transactions/categories?type=EXPENSE` returns distinct category suggestions from the signed-in user's existing transactions. The optional type filter accepts `INCOME` or `EXPENSE`.
+
 ```json
 {
   "items": [],

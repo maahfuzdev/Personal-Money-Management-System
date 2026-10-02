@@ -36,6 +36,11 @@ export function getTransactions(token, filters = {}) {
   return request(`/transactions?${params.toString()}`, token)
 }
 
+export function getCategorySuggestions(token, type) {
+  const query = type ? `?type=${encodeURIComponent(type)}` : ''
+  return request(`/transactions/categories${query}`, token)
+}
+
 export async function exportTransactions(token, filters = {}) {
   const params = new URLSearchParams()
   if (filters.type) params.set('type', filters.type)

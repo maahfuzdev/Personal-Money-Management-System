@@ -13,6 +13,10 @@ import java.time.LocalDate;
 
 public interface TransactionRepository extends JpaRepository<MoneyTransaction, Long> {
 
+    @Query("select min(t.category) from MoneyTransaction t where t.user.id = :userId " +
+            "and (:type is null or t.type = :type) group by lower(t.category) order by min(t.category)")
+    List<String> findCategorySuggestions(@Param("userId") Long userId, @Param("type") TransactionType type);
+
     @Query(value = "select t from MoneyTransaction t where t.user.id = :userId " +
             "and (:type is null or t.type = :type) " +
             "and (:startDate is null or t.transactionDate >= :startDate) " +

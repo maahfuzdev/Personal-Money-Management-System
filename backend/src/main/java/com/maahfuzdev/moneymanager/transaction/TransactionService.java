@@ -43,6 +43,10 @@ public class TransactionService {
                 results.getSize(), results.getTotalElements(), results.getTotalPages());
     }
 
+    public List<String> categorySuggestions(String email, TransactionType type) {
+        return transactionRepository.findCategorySuggestions(user(email).getId(), type);
+    }
+
     public byte[] exportCsv(String email, TransactionType type, String search,
                             LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {

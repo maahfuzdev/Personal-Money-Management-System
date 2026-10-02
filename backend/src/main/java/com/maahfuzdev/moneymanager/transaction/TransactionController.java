@@ -2,6 +2,7 @@ package com.maahfuzdev.moneymanager.transaction;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -45,6 +46,12 @@ public class TransactionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return transactionService.list(jwt.getSubject(), type, search, startDate, endDate, page, size);
+    }
+
+    @GetMapping("/categories")
+    public List<String> categories(@AuthenticationPrincipal Jwt jwt,
+                                  @RequestParam(required = false) TransactionType type) {
+        return transactionService.categorySuggestions(jwt.getSubject(), type);
     }
 
     @GetMapping(value = "/export.csv", produces = "text/csv")
