@@ -354,6 +354,16 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .goal-card-bottom { display: flex; align-items: start; justify-content: space-between; gap: 8px; color: #909b93; font-size: 9px; }
 .goal-card-bottom span { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .goal-card-bottom strong { flex: 0 0 auto; color: #53645a; font-size: 9px; }
+.goal-contribution-actions { display: flex; gap: 14px; }
+.goal-contribution-actions button { padding: 0; border: 0; background: transparent; color: #477857; cursor: pointer; font-size: 10px; font-weight: 700; }
+.goal-contribution-actions button:disabled { color: #97a49a; cursor: default; }
+.goal-contribution-form { display: grid; gap: 10px; padding: 12px; border: 1px solid #e8efe9; border-radius: 10px; background: #f9fcf9; }
+.goal-contribution-form .form-field { gap: 5px; font-size: 10px; }
+.goal-contribution-form .form-field input { min-height: 36px; font-size: 11px; }
+.goal-contribution-form .submit-button { min-height: 36px; font-size: 10px; }
+.goal-contribution-history { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid #edf1ed; color: #7b887e; font-size: 9px; }
+.goal-contribution-history > div { display: flex; justify-content: space-between; gap: 10px; }
+.goal-contribution-history strong { flex: 0 0 auto; color: #35744c; }
 .goal-form { display: grid; align-content: start; gap: 13px; padding: 17px; border: 1px solid #eef2ef; border-radius: 12px; background: #fbfcfb; }
 .goal-form h3 { margin: 0 0 2px; color: #34453a; font-family: 'Manrope', sans-serif; font-size: 13px; }
 .goal-form .form-field { gap: 6px; color: #394a3e; font-size: 10px; font-weight: 600; }

@@ -171,6 +171,14 @@ export function updateGoal(token, id, goal) {
   return request(`/goals/${id}`, token, { method: 'PUT', body: JSON.stringify(goal) })
 }
 
+export function getGoalContributions(token, id) {
+  return request(`/goals/${id}/contributions`, token)
+}
+
+export function addGoalContribution(token, id, contribution) {
+  return request(`/goals/${id}/contributions`, token, { method: 'POST', body: JSON.stringify(contribution) })
+}
+
 export function deleteGoal(token, id) {
   return request(`/goals/${id}`, token, { method: 'DELETE' })
 }

@@ -3,6 +3,7 @@ import {
   createTransaction,
   createBudget,
   createGoal,
+  addGoalContribution,
   createRecurringTransaction,
   deleteGoal,
   deleteRecurringTransaction,
@@ -15,6 +16,7 @@ import {
   getCategorySuggestions,
   getDashboardAnalytics,
   getGoals,
+  getGoalContributions,
   getRecurringTransactions,
   getTransactionSummary,
   getTransactions,
@@ -725,7 +727,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             <div className="goal-grid">
               {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading goals…</div>
                 : goals.length === 0 ? <div className="empty-state compact"><span className="empty-icon">☆</span><strong>Give your savings a purpose</strong><span>Create a goal and celebrate each step forward.</span></div>
-                : goals.map((goal) => <GoalCard key={goal.id} goal={goal} onEdit={() => startGoalEdit(goal)} onDelete={() => requestDelete('goal', goal)} />)}
+                : goals.map((goal) => <GoalCard key={goal.id} goal={goal} token={session.token}
+                  onContributed={async (amount) => { await loadDashboard(); setSuccessMessage(`${money.format(amount)} added to ${goal.name}.`) }}
+                  onEdit={() => startGoalEdit(goal)} onDelete={() => requestDelete('goal', goal)} />)}
             </div>
             <form id="goal-form" className="goal-form" onSubmit={handleGoalSubmit}>
               <h3>{editingGoalId ? 'Edit savings goal' : 'Create a goal'}</h3>
@@ -882,8 +886,33 @@ function BudgetRow({ budget, isCurrentMonth, onEdit, onDelete }) {
   </article>
 }
 
-function GoalCard({ goal, onEdit, onDelete }) {
+function GoalCard({ goal, token, onContributed, onEdit, onDelete }) {
+  const [showContribution, setShowContribution] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [contributions, setContributions] = useState([])
+  const [contributionAmount, setContributionAmount] = useState('')
+  const [contributionNote, setContributionNote] = useState('')
+  const [contributionError, setContributionError] = useState('')
+  const [isSavingContribution, setIsSavingContribution] = useState(false)
   const progress = Number(goal.completionPercent)
+  async function toggleHistory() {
+    if (!showHistory) {
+      try { setContributions(await getGoalContributions(token, goal.id)) }
+      catch (error) { setContributionError(error.message); return }
+    }
+    setContributionError(''); setShowHistory(!showHistory)
+  }
+  async function submitContribution(event) {
+    event.preventDefault(); setContributionError(''); setIsSavingContribution(true)
+    try {
+      const amount = Number(contributionAmount)
+      await addGoalContribution(token, goal.id, { amount, note: contributionNote.trim() || null })
+      setContributionAmount(''); setContributionNote(''); setShowContribution(false)
+      await onContributed(amount)
+      if (showHistory) setContributions(await getGoalContributions(token, goal.id))
+    } catch (error) { setContributionError(error.message) }
+    finally { setIsSavingContribution(false) }
+  }
   return <article className={`goal-card ${goal.completed ? 'completed' : ''}`}>
     <div className="goal-card-heading"><span className="goal-badge" aria-hidden="true">{goal.completed ? '✓' : '☆'}</span>
       <div className="goal-card-title"><strong>{goal.name}</strong><span>{goal.targetDate ? `Target ${dateLabel.format(new Date(`${goal.targetDate}T00:00:00`))}` : 'No target date'}</span></div>
@@ -892,6 +921,17 @@ function GoalCard({ goal, onEdit, onDelete }) {
     <div className="goal-values"><strong>{money.format(goal.currentAmount)}</strong><span>of {money.format(goal.targetAmount)}</span><b>{progress}%</b></div>
     <div className="goal-progress" role="progressbar" aria-label={`${goal.name} savings progress`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}><span style={{ width: `${progress}%` }} /></div>
     <div className="goal-card-bottom"><span>{goal.note || (goal.completed ? 'You reached your goal!' : 'Every little bit adds up.')}</span><strong>{goal.completed ? 'Completed' : `${money.format(goal.remainingAmount)} to go`}</strong></div>
+    <div className="goal-contribution-actions"><button type="button" disabled={goal.completed} onClick={() => { setShowContribution(!showContribution); setContributionError('') }}>{goal.completed ? 'Goal completed' : 'Add contribution'}</button>
+      <button type="button" onClick={toggleHistory}>{showHistory ? 'Hide history' : 'History'}</button></div>
+    {contributionError && <div className="form-alert" role="alert">{contributionError}</div>}
+    {showContribution && <form className="goal-contribution-form" onSubmit={submitContribution}>
+      <label className="form-field"><span>Amount <small>(BDT)</small></span><input autoFocus required min="0.01" max={goal.remainingAmount} step="0.01" type="number" inputMode="decimal" value={contributionAmount} onChange={(event) => setContributionAmount(event.target.value)} /></label>
+      <label className="form-field"><span>Note <small>(optional)</small></span><input maxLength="300" value={contributionNote} onChange={(event) => setContributionNote(event.target.value)} placeholder="e.g. Monthly savings" /></label>
+      <button className="submit-button" type="submit" disabled={isSavingContribution}>{isSavingContribution ? 'Adding…' : 'Add to goal'}</button>
+    </form>}
+    {showHistory && <div className="goal-contribution-history">{contributions.length === 0 ? <span>No contributions recorded yet.</span> : contributions.map((item) => <div key={item.id}>
+      <span>{item.note || 'Contribution'} · {dateLabel.format(new Date(item.createdAt))}</span><strong>+{money.format(item.amount)}</strong>
+    </div>)}</div>}
   </article>
 }
 

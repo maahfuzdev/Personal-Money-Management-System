@@ -321,6 +321,36 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavingsGoal' }
         '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/goals/{id}/contributions:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    get:
+      tags: [Savings goals]
+      summary: List contribution history for a goal
+      responses:
+        '200': { description: Contributions, newest first }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Savings goals]
+      summary: Add money to a goal and record the contribution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: { type: number, exclusiveMinimum: 0 }
+                note: { type: string, maxLength: 300, nullable: true }
+      responses:
+        '200':
+          description: Updated goal progress
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavingsGoal' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/v1/goals/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }

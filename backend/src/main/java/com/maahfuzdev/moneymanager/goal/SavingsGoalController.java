@@ -29,6 +29,17 @@ public class SavingsGoalController {
         return goalService.list(jwt.getSubject());
     }
 
+    @GetMapping("/{id}/contributions")
+    public List<GoalContributionResponse> contributions(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return goalService.contributions(jwt.getSubject(), id);
+    }
+
+    @PostMapping("/{id}/contributions")
+    public SavingsGoalResponse contribute(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id,
+            @Valid @RequestBody GoalContributionRequest request) {
+        return goalService.contribute(jwt.getSubject(), id, request);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public SavingsGoalResponse create(@AuthenticationPrincipal Jwt jwt,

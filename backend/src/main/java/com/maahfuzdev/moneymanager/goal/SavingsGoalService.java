@@ -12,10 +12,13 @@ import java.util.List;
 public class SavingsGoalService {
 
     private final SavingsGoalRepository goalRepository;
+    private final GoalContributionRepository contributionRepository;
     private final AppUserRepository userRepository;
 
-    public SavingsGoalService(SavingsGoalRepository goalRepository, AppUserRepository userRepository) {
+    public SavingsGoalService(SavingsGoalRepository goalRepository, GoalContributionRepository contributionRepository,
+                              AppUserRepository userRepository) {
         this.goalRepository = goalRepository;
+        this.contributionRepository = contributionRepository;
         this.userRepository = userRepository;
     }
 
@@ -46,6 +49,22 @@ public class SavingsGoalService {
     @Transactional
     public void delete(String email, Long id) {
         goalRepository.delete(ownedGoal(user(email).getId(), id));
+    }
+
+    public List<GoalContributionResponse> contributions(String email, Long id) {
+        SavingsGoal goal = ownedGoal(user(email).getId(), id);
+        return contributionRepository.findAllByGoalIdOrderByCreatedAtDesc(goal.getId()).stream()
+                .map(GoalContributionResponse::from).toList();
+    }
+
+    @Transactional
+    public SavingsGoalResponse contribute(String email, Long id, GoalContributionRequest request) {
+        SavingsGoal goal = goalRepository.findOwnedForUpdate(id, user(email).getId())
+                .orElseThrow(SavingsGoalNotFoundException::new);
+        goal.addContribution(request.amount());
+        String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
+        contributionRepository.save(new GoalContribution(goal, request.amount(), note));
+        return SavingsGoalResponse.from(goal);
     }
 
     private void validateAmounts(SavingsGoalRequest request) {

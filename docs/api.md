@@ -113,6 +113,8 @@ All goal endpoints require a bearer access token and only return goals belonging
 - `POST /api/v1/goals` creates a goal.
 - `PUT /api/v1/goals/{id}` updates a goal.
 - `DELETE /api/v1/goals/{id}` removes a goal and returns `204 No Content`.
+- `POST /api/v1/goals/{id}/contributions` adds an amount to the goal balance and records its optional note and timestamp. A contribution that would exceed the target is rejected.
+- `GET /api/v1/goals/{id}/contributions` returns that goal's contribution history, newest first.
 
 Goal requests contain a `name`, positive `targetAmount`, non-negative `currentAmount`, optional `targetDate` (`YYYY-MM-DD`), and optional `note`. Current savings cannot exceed the target. Responses also include `remainingAmount`, `completionPercent` (capped at 100), and `completed`.
 

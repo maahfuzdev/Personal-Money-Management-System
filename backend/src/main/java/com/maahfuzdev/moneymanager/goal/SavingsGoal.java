@@ -69,6 +69,11 @@ public class SavingsGoal {
         this.note = note;
     }
 
+    public void addContribution(BigDecimal amount) {
+        if (currentAmount.add(amount).compareTo(targetAmount) > 0) throw new SavingsGoalAmountException();
+        currentAmount = currentAmount.add(amount);
+    }
+
     @PrePersist
     void onCreate() { createdAt = updatedAt = Instant.now(); }
 
