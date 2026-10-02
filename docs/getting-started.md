@@ -17,6 +17,8 @@ DB_USERNAME=your_mysql_user
 DB_PASSWORD=your_mysql_password
 ```
 
+On the next backend start, Flyway automatically applies the versioned SQL migrations, including the user and transaction tables. Keep using the same database configuration so existing accounts remain available.
+
 Set those values in your IDE run configuration or process environment before starting the API. Never place real credentials in a committed file. The backend and frontend READMEs contain their individual run commands.
 
 The authentication API also needs a signing secret. In PowerShell, generate a fresh one for local development:

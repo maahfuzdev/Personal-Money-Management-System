@@ -18,12 +18,52 @@ All application endpoints will use `/api/v1`. The browser client receives the AP
 | Resource | Purpose | Status |
 | --- | --- | --- |
 | `/auth` | Register and sign in | Implemented |
-| `/transactions` | Create and browse income and expenses | Planned |
+| `/transactions` | Manage income and expenses | Implemented |
 | `/budgets` | Set and review spending budgets | Planned |
 | `/goals` | Track savings goals | Planned |
 | `/dashboard` | Return summary totals and trends | Planned |
 
-The contract will be updated with concrete request and response examples as each feature is implemented.
+## Transactions
+
+All transaction endpoints require `Authorization: Bearer <accessToken>`. Each request is scoped to the signed-in account; clients do not send a user ID. A transaction belonging to another account is reported as not found.
+
+### List transactions
+
+`GET /api/v1/transactions` returns the current user's transactions, newest transaction date first.
+
+### Create a transaction
+
+`POST /api/v1/transactions` returns `201 Created`.
+
+```json
+{
+  "type": "EXPENSE",
+  "amount": 42.50,
+  "category": "Food",
+  "note": "Lunch",
+  "transactionDate": "2026-10-02"
+}
+```
+
+`type` must be `INCOME` or `EXPENSE`; amount must be positive and have at most two decimal places. Category is required (up to 60 characters), note is optional (up to 500 characters), and date uses `YYYY-MM-DD`.
+
+### Update or delete
+
+- `PUT /api/v1/transactions/{id}` accepts the same JSON as create and returns the updated transaction.
+- `DELETE /api/v1/transactions/{id}` returns `204 No Content`.
+- Missing or non-owned IDs return `404 Not Found`.
+
+### Summary
+
+`GET /api/v1/transactions/summary` returns all-time totals for the signed-in account:
+
+```json
+{
+  "totalIncome": 2500.00,
+  "totalExpense": 42.50,
+  "balance": 2457.50
+}
+```
 
 ## Authentication
 

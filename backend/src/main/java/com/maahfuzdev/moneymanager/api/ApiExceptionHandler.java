@@ -2,6 +2,7 @@ package com.maahfuzdev.moneymanager.api;
 
 import com.maahfuzdev.moneymanager.auth.EmailAlreadyRegisteredException;
 import com.maahfuzdev.moneymanager.auth.InvalidCredentialsException;
+import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     ResponseEntity<ApiError> invalidCredentials(HttpServletRequest request) {
         return error(HttpStatus.UNAUTHORIZED, "Email or password is incorrect.", request, Map.of());
+    }
+
+    @ExceptionHandler(TransactionNotFoundException.class)
+    ResponseEntity<ApiError> transactionNotFound(HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Transaction not found.", request, Map.of());
     }
 
     private ResponseEntity<ApiError> error(
