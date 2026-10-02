@@ -22,7 +22,7 @@ function AuthScreen({ onAuthenticated }) {
       const response = isRegistering
         ? await registerAccount({ name: name.trim(), email: email.trim(), password })
         : await signIn({ email: email.trim(), password })
-      onAuthenticated({ token: response.accessToken, user: response.user })
+      onAuthenticated({ token: response.accessToken, refreshToken: response.refreshToken, user: response.user })
     } catch (requestError) {
       setError(requestError.message)
       setFieldErrors(requestError.fieldErrors || {})
@@ -132,7 +132,7 @@ function AuthScreen({ onAuthenticated }) {
       </form>
 
       <p className="auth-privacy">
-        Your access token stays in this browser tab and is not added to the page URL.
+        Session tokens stay in this browser tab's memory and are never added to the page URL. Sign in again after a reload.
       </p>
     </div>
   )

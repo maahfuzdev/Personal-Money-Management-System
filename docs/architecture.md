@@ -32,7 +32,7 @@ The React app keeps account access and the signed-in finance workspace in featur
 
 ## Authentication
 
-The API hashes account passwords with Spring Security's PBKDF2 encoder and issues 15-minute HMAC-signed bearer access tokens. The signing key is supplied as `JWT_SECRET` and must contain at least 32 random bytes after Base64 decoding. The React app keeps access tokens in memory and sends them in the `Authorization` header. Refresh-token support is a separate follow-up before production use.
+The API hashes account passwords with Spring Security's PBKDF2 encoder and issues short-lived HMAC-signed bearer access tokens. Opaque refresh tokens are single-use, stored as SHA-256 hashes, rotated on refresh, and revoked by session family on logout or replay. The signing key is supplied as `JWT_SECRET` and must contain at least 32 random bytes after Base64 decoding. The browser client keeps both tokens in memory, sends access tokens in the `Authorization` header, and rotates an access token after a 401. Reloading ends the in-memory session.
 
 ## API conventions
 
@@ -43,4 +43,4 @@ The API hashes account passwords with Spring Security's PBKDF2 encoder and issue
 
 ## Deployment
 
-Build and deploy `frontend/` as a static web app and `backend/` as a Java service. Set the frontend API base URL and backend allowed-origin/database environment variables in their respective hosting services. Deployment steps will be documented when the app's runtime configuration is in place.
+Build and deploy `frontend/` as a static web app and `backend/` as a Java service, or use the included Docker Compose setup for a self-hosted install. Set the frontend API base URL and backend allowed-origin/database/JWT environment variables in their respective hosting services. See [Deployment](deployment.md) and the [OpenAPI contract](openapi.yaml).

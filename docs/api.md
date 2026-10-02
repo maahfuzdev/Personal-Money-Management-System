@@ -2,7 +2,7 @@
 
 ## Base path
 
-All application endpoints will use `/api/v1`. The browser client receives the API base URL from `VITE_API_BASE_URL`; the backend port is configurable with `PORT`. The local default is `http://localhost:8080/api/v1`.
+Application endpoints use `/api/v1`. The browser client receives the API base URL from `VITE_API_BASE_URL`; the backend port is configurable with `PORT`. The local default is `http://localhost:8081/api/v1`. The complete machine-readable contract is [OpenAPI 3.1](openapi.yaml).
 
 ## Response rules
 
@@ -159,13 +159,13 @@ Goal requests contain a `name`, positive `targetAmount`, non-negative `currentAm
 }
 ```
 
-Returns `201 Created` with the created user's public profile and a 15-minute bearer access token. Passwords must contain 12–128 characters. An existing email returns `409 Conflict`.
+Returns `201 Created` with the created user's public profile, a 15-minute bearer access token, and a 30-day opaque refresh token. Passwords must contain 12–128 characters. An existing email returns `409 Conflict`.
 
 ### Sign in
 
-`POST /api/v1/auth/login` accepts `email` and `password`. Invalid credentials return the same generic `401 Unauthorized` message, whether the email or password was incorrect.
+`POST /api/v1/auth/login` accepts `email` and `password`, then issues both tokens. Invalid credentials return the same generic `401 Unauthorized` message, whether the email or password was incorrect.
 
-The React authentication screen calls these endpoints directly. It keeps the access token in memory for the current page session and sends it only in the `Authorization` header.
+The client must keep tokens out of URLs. The React app keeps them in memory, sends the access token in the `Authorization` header, and automatically refreshes after a 401. The refresh token is opaque, random, and single-use. The API stores only its SHA-256 hash. `POST /api/v1/auth/refresh` rotates the supplied refresh token and returns a new pair; replaying a consumed token revokes its session family. `POST /api/v1/auth/logout` revokes the family and returns `204 No Content`. Unknown refresh tokens are accepted by logout to keep it idempotent. Already issued access tokens remain valid until expiry.
 
 ### Current account
 

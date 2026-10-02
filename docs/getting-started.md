@@ -25,14 +25,16 @@ The authentication API also needs a signing secret. In PowerShell, generate a fr
 
 ```powershell
 $jwtBytes = New-Object byte[] 32
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($jwtBytes)
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($jwtBytes)
 $env:JWT_SECRET = [Convert]::ToBase64String($jwtBytes)
+$rng.Dispose()
 ```
 
 If you are using **Command Prompt (CMD)**, generate the key with PowerShell, copy the printed output, then set it in the same CMD window:
 
 ```cmd
-powershell -NoProfile -Command "$bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes); [Convert]::ToBase64String($bytes)"
+powershell -NoProfile -Command "$bytes = New-Object byte[] 32; $rng = [Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); [Convert]::ToBase64String($bytes); $rng.Dispose()"
 set "JWT_SECRET=PASTE_THE_PRINTED_KEY_HERE"
 mvnw.cmd spring-boot:run
 ```
@@ -44,9 +46,9 @@ Set `APP_CORS_ALLOWED_ORIGIN` to the frontend origin when it is not `http://loca
 ## Local URLs
 
 - React development server: `http://localhost:5173`
-- Java API: `http://localhost:8080`
+- Java API: `http://localhost:8081`
 
-The browser app's API URL is supplied through `VITE_API_BASE_URL`. Local defaults and production settings will be documented alongside the API setup.
+The browser app's API URL is supplied through `VITE_API_BASE_URL`; the local default is `http://localhost:8081/api/v1`. Production settings are in [Deployment](deployment.md).
 
 ## Learning in increments
 

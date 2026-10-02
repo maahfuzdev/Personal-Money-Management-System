@@ -1,16 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { logoutSession } from './api/authApi.js'
+import { setRefreshToken } from './api/transactionApi.js'
 import AuthScreen from './features/auth/AuthScreen.jsx'
 import Dashboard from './features/dashboard/Dashboard.jsx'
 
 function App() {
   const [session, setSession] = useState(null)
+  const sessionRef = useRef(null)
   const [path, setPath] = useState(window.location.pathname)
-
-  useEffect(() => {
-    const onPopState = () => setPath(window.location.pathname)
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-  }, [])
 
   const navigate = useCallback((nextPath) => {
     if (window.location.pathname !== nextPath) window.history.pushState({}, '', nextPath)
@@ -18,12 +15,46 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [])
 
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname)
+    const onSessionRefreshed = (event) => {
+      if (!sessionRef.current) return
+      const nextSession = {
+        ...sessionRef.current,
+        token: event.detail.accessToken,
+        refreshToken: event.detail.refreshToken,
+      }
+      sessionRef.current = nextSession
+      setRefreshToken(nextSession.refreshToken)
+      setSession(nextSession)
+    }
+    const onSessionExpired = () => {
+      sessionRef.current = null
+      setSession(null)
+      navigate('/login')
+    }
+    window.addEventListener('popstate', onPopState)
+    window.addEventListener('auth:session-refreshed', onSessionRefreshed)
+    window.addEventListener('auth:session-expired', onSessionExpired)
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('auth:session-refreshed', onSessionRefreshed)
+      window.removeEventListener('auth:session-expired', onSessionExpired)
+    }
+  }, [navigate])
+
   const handleAuthenticated = useCallback((nextSession) => {
+    sessionRef.current = nextSession
+    setRefreshToken(nextSession.refreshToken)
     setSession(nextSession)
     navigate('/')
   }, [navigate])
 
   const handleSignOut = useCallback(() => {
+    const currentSession = sessionRef.current
+    if (currentSession?.refreshToken) void logoutSession(currentSession.refreshToken)
+    sessionRef.current = null
+    setRefreshToken(null)
     setSession(null)
     navigate('/login')
   }, [navigate])

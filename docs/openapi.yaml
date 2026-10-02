@@ -1,0 +1,467 @@
+openapi: 3.1.0
+info:
+  title: Personal Money Management API
+  version: 1.0.0
+  description: Versioned REST API for account access, transactions, budgets, savings goals, and monthly analytics.
+servers:
+  - url: http://localhost:8081
+    description: Local development
+  - url: https://api.example.com
+    description: Replace with the deployed API origin
+security:
+  - bearerAuth: []
+tags:
+  - name: Authentication
+  - name: Transactions
+  - name: Budgets
+  - name: Savings goals
+  - name: Dashboard
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Create an account and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Account created; access and refresh tokens issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Sign in and start a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Tokens issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/auth/refresh:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Rotate a refresh token and issue a new access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: Previous refresh token revoked and replaced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Revoke the refresh-token session family
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '204': { description: Session revoked; unknown refresh tokens are accepted idempotently }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get the current account
+      responses:
+        '200':
+          description: Current account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/transactions:
+    get:
+      tags: [Transactions]
+      summary: List the current account's transactions
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 10 } }
+        - { name: type, in: query, schema: { type: string, enum: [INCOME, EXPENSE] } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: startDate, in: query, schema: { type: string, format: date } }
+        - { name: endDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Filtered transaction page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Transactions]
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransactionRequest' }
+      responses:
+        '201':
+          description: Created transaction
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/transactions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    put:
+      tags: [Transactions]
+      summary: Replace a transaction owned by the current account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransactionRequest' }
+      responses:
+        '200':
+          description: Updated transaction
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Transactions]
+      summary: Delete a transaction owned by the current account
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/transactions/categories:
+    get:
+      tags: [Transactions]
+      summary: List distinct categories previously used by the current account
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [INCOME, EXPENSE] } }
+      responses:
+        '200':
+          description: Category names
+          content:
+            application/json:
+              schema: { type: array, items: { type: string } }
+  /api/v1/transactions/summary:
+    get:
+      tags: [Transactions]
+      summary: Get all-time income, expense, and balance totals
+      responses:
+        '200':
+          description: Totals
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransactionSummary' }
+  /api/v1/transactions/export.csv:
+    get:
+      tags: [Transactions]
+      summary: Export matching transactions as CSV
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [INCOME, EXPENSE] } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: startDate, in: query, schema: { type: string, format: date } }
+        - { name: endDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: UTF-8 CSV file (maximum 10,000 rows)
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '413': { description: Export exceeds the row limit }
+  /api/v1/budgets:
+    get:
+      tags: [Budgets]
+      summary: List monthly budgets for the current account
+      parameters:
+        - { name: month, in: query, description: Calendar month in YYYY-MM format, schema: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } }
+      responses:
+        '200':
+          description: Budgets and spending for the selected month
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Budget' } }
+    post:
+      tags: [Budgets]
+      summary: Create a monthly category budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BudgetRequest' }
+      responses:
+        '201':
+          description: Created budget
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Budget' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/v1/budgets/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    put:
+      tags: [Budgets]
+      summary: Update a budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BudgetRequest' }
+      responses:
+        '200':
+          description: Updated budget
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Budget' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Budgets]
+      summary: Delete a budget
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/goals:
+    get:
+      tags: [Savings goals]
+      summary: List savings goals
+      responses:
+        '200':
+          description: Savings goals and progress
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/SavingsGoal' } }
+    post:
+      tags: [Savings goals]
+      summary: Create a savings goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SavingsGoalRequest' }
+      responses:
+        '201':
+          description: Created savings goal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavingsGoal' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/goals/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    put:
+      tags: [Savings goals]
+      summary: Update a savings goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SavingsGoalRequest' }
+      responses:
+        '200':
+          description: Updated goal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavingsGoal' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Savings goals]
+      summary: Delete a savings goal
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/dashboard/analytics:
+    get:
+      tags: [Dashboard]
+      summary: Get selected-month totals, six-month trend, and category breakdown
+      parameters:
+        - { name: month, in: query, description: Calendar month in YYYY-MM format, schema: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$" } }
+      responses:
+        '200':
+          description: Monthly analytics
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardAnalytics' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Invalid request or validation failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Unauthorized:
+      description: Missing/expired access token or invalid refresh token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    NotFound:
+      description: Resource does not exist or is not owned by this account
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+    Conflict:
+      description: Resource conflicts with existing account data
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 128 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string, maxLength: 128 }
+    AuthResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, description: Access-token lifetime in seconds }
+        refreshToken: { type: string, description: Opaque rotating token; the database stores only its SHA-256 hash }
+        refreshExpiresIn: { type: integer, description: Refresh-token lifetime in seconds }
+        user: { $ref: '#/components/schemas/UserSummary' }
+    UserSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string, format: email }
+    TransactionRequest:
+      type: object
+      required: [type, amount, category, transactionDate]
+      properties:
+        type: { type: string, enum: [INCOME, EXPENSE] }
+        amount: { type: number, minimum: 0.01, multipleOf: 0.01 }
+        category: { type: string, minLength: 1, maxLength: 60 }
+        note: { type: [string, 'null'], maxLength: 500 }
+        transactionDate: { type: string, format: date }
+    Transaction:
+      allOf:
+        - { $ref: '#/components/schemas/TransactionRequest' }
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            createdAt: { type: string, format: date-time }
+    TransactionPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Transaction' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer }
+    TransactionSummary:
+      type: object
+      properties:
+        totalIncome: { type: number }
+        totalExpense: { type: number }
+        balance: { type: number }
+    BudgetRequest:
+      type: object
+      required: [category, monthlyLimit, month]
+      properties:
+        category: { type: string, minLength: 1, maxLength: 60 }
+        monthlyLimit: { type: number, minimum: 0.01, multipleOf: 0.01 }
+        month: { type: string, pattern: "^\\d{4}-(0[1-9]|1[0-2])$", example: '2026-10' }
+    Budget:
+      allOf:
+        - { $ref: '#/components/schemas/BudgetRequest' }
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            spent: { type: number }
+            remaining: { type: number }
+    SavingsGoalRequest:
+      type: object
+      required: [name, targetAmount, currentAmount]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        targetAmount: { type: number, minimum: 0.01, multipleOf: 0.01 }
+        currentAmount: { type: number, minimum: 0, multipleOf: 0.01 }
+        targetDate: { type: [string, 'null'], format: date }
+        note: { type: [string, 'null'], maxLength: 300 }
+    SavingsGoal:
+      allOf:
+        - { $ref: '#/components/schemas/SavingsGoalRequest' }
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            remainingAmount: { type: number }
+            completionPercent: { type: number }
+            completed: { type: boolean }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    DashboardAnalytics:
+      type: object
+      properties:
+        selectedMonth: { type: string, example: '2026-10' }
+        monthIncome: { type: number }
+        monthExpense: { type: number }
+        monthBalance: { type: number }
+        monthlyTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              month: { type: string }
+              income: { type: number }
+              expense: { type: number }
+        expenseByCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              category: { type: string }
+              amount: { type: number }
+              sharePercent: { type: number }
+    ApiError:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        status: { type: integer }
+        error: { type: string }
+        message: { type: string }
+        path: { type: string }
+        fieldErrors: { type: object, additionalProperties: { type: string } }

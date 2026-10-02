@@ -18,10 +18,14 @@ Endpoints are versioned under `/api/v1`. DTOs define the public request and resp
 
 ## Authentication endpoints
 
-- `POST /api/v1/auth/register` creates an account and returns a short-lived bearer token.
-- `POST /api/v1/auth/login` checks credentials and returns a bearer token.
+- `POST /api/v1/auth/register` creates an account and returns short-lived access and rotating refresh tokens.
+- `POST /api/v1/auth/login` checks credentials and returns access and refresh tokens.
+- `POST /api/v1/auth/refresh` accepts `{ "refreshToken": "..." }`, revokes that token, and returns a replacement pair.
+- `POST /api/v1/auth/logout` accepts `{ "refreshToken": "..." }` and revokes its session family. It is idempotent.
 - `GET /api/v1/auth/me` returns the signed-in account; send `Authorization: Bearer <token>`.
 
-Passwords are stored as PBKDF2 hashes. Access tokens expire after 15 minutes. The browser app should keep the token in memory and send it in the `Authorization` header; do not put it in a URL or commit it.
+Passwords are stored as PBKDF2 hashes. Access tokens expire after 15 minutes by default. Refresh tokens are random opaque values; only their SHA-256 hashes are stored. Each refresh token is single-use. Replaying a consumed token revokes the related session family. Logout revokes the refresh family, while issued access tokens remain valid until expiry. Keep tokens out of URLs and source control.
 
 On startup, Flyway applies versioned scripts from `src/main/resources/db/migration`. The first script creates the `app_users` table; Hibernate validates the resulting schema and does not modify it.
+
+The complete endpoint contract is in [OpenAPI](../docs/openapi.yaml). Container and production environment setup is documented in [Deployment](../docs/deployment.md).

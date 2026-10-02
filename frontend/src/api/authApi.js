@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/$/, '')
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1').replace(/\/$/, '')
 
 async function sendAuthRequest(path, body) {
   let response
@@ -30,4 +30,12 @@ export function registerAccount({ name, email, password }) {
 
 export function signIn({ email, password }) {
   return sendAuthRequest('/auth/login', { email, password })
+}
+
+export function refreshSession(refreshToken) {
+  return sendAuthRequest('/auth/refresh', { refreshToken })
+}
+
+export function logoutSession(refreshToken) {
+  return sendAuthRequest('/auth/logout', { refreshToken }).catch(() => null)
 }

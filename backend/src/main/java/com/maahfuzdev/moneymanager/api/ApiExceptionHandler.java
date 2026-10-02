@@ -2,6 +2,7 @@ package com.maahfuzdev.moneymanager.api;
 
 import com.maahfuzdev.moneymanager.auth.EmailAlreadyRegisteredException;
 import com.maahfuzdev.moneymanager.auth.InvalidCredentialsException;
+import com.maahfuzdev.moneymanager.auth.InvalidRefreshTokenException;
 import com.maahfuzdev.moneymanager.budget.BudgetAlreadyExistsException;
 import com.maahfuzdev.moneymanager.budget.BudgetNotFoundException;
 import com.maahfuzdev.moneymanager.goal.SavingsGoalAmountException;
@@ -14,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -46,6 +48,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException.class)
     ResponseEntity<ApiError> invalidCredentials(HttpServletRequest request) {
         return error(HttpStatus.UNAUTHORIZED, "Email or password is incorrect.", request, Map.of());
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    ResponseEntity<ApiError> invalidRefreshToken(HttpServletRequest request) {
+        return error(HttpStatus.UNAUTHORIZED, "Refresh token is invalid, expired, or revoked. Sign in again.", request, Map.of());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ApiError> dataConflict(HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "The submitted data conflicts with existing account data.", request, Map.of());
     }
 
     @ExceptionHandler(TransactionNotFoundException.class)

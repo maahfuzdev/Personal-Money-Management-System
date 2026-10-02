@@ -1,6 +1,17 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1').replace(/\/$/, '')
+import { refreshSession } from './authApi.js'
 
-async function request(path, token, options = {}) {
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1').replace(/\/$/, '')
+let refreshInFlight = null
+let currentRefreshToken = null
+let sessionGeneration = 0
+
+export function setRefreshToken(token) {
+  currentRefreshToken = token
+  sessionGeneration += 1
+  refreshInFlight = null
+}
+
+async function authorizedFetch(path, token, options = {}, allowRefresh = true) {
   let response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -14,6 +25,37 @@ async function request(path, token, options = {}) {
   } catch {
     throw new Error('Could not reach the server. Check that the backend is running and try again.')
   }
+
+  if (response.status === 401 && allowRefresh) {
+    if (currentRefreshToken) {
+      if (!refreshInFlight) {
+        const generation = sessionGeneration
+        const pendingRefresh = refreshSession(currentRefreshToken)
+          .then((tokens) => {
+            if (generation !== sessionGeneration) throw new Error('The account session changed. Please retry your request.')
+            currentRefreshToken = tokens.refreshToken
+            window.dispatchEvent(new CustomEvent('auth:session-refreshed', { detail: tokens }))
+            return tokens
+          })
+          .catch((error) => {
+            if (error.status === 401 && generation === sessionGeneration) {
+              currentRefreshToken = null
+              window.dispatchEvent(new CustomEvent('auth:session-expired'))
+            }
+            throw error
+          })
+          .finally(() => { if (refreshInFlight === pendingRefresh) refreshInFlight = null })
+        refreshInFlight = pendingRefresh
+      }
+      const tokens = await refreshInFlight
+      return authorizedFetch(path, tokens.accessToken, options, false)
+    }
+  }
+  return response
+}
+
+async function request(path, token, options = {}) {
+  const response = await authorizedFetch(path, token, options)
 
   if (response.status === 204) return null
   const payload = await response.json().catch(() => null)
@@ -48,14 +90,7 @@ export async function exportTransactions(token, filters = {}) {
   if (filters.startDate) params.set('startDate', filters.startDate)
   if (filters.endDate) params.set('endDate', filters.endDate)
 
-  let response
-  try {
-    response = await fetch(`${API_BASE_URL}/transactions/export.csv?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-  } catch {
-    throw new Error('Could not reach the server. Check that the backend is running and try again.')
-  }
+  const response = await authorizedFetch(`/transactions/export.csv?${params.toString()}`, token)
 
   if (!response.ok) {
     const payload = await response.json().catch(() => null)
