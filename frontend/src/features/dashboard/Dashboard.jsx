@@ -581,6 +581,23 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <TransactionRow key={transaction.id} transaction={transaction} />)}</div>}
         </section>}
 
+        {route === '/' && <section className="panel upcoming-panel" aria-labelledby="upcoming-heading">
+          <div className="panel-heading"><div><p className="eyebrow">COMING UP</p><h2 id="upcoming-heading">Scheduled transactions</h2></div>
+            <button className="subtle-link" type="button" onClick={() => navigate('/recurring')}>Manage schedules <span aria-hidden="true">→</span></button>
+          </div>
+          {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading schedules…</div>
+            : recurringTransactions.filter((item) => item.active).length === 0
+              ? <div className="empty-state compact"><strong>No active schedules</strong><span>Set up regular income or expenses to keep your records current.</span><button className="subtle-link" type="button" onClick={() => navigate('/recurring')}>Create a schedule →</button></div>
+              : <div className="upcoming-list">{recurringTransactions.filter((item) => item.active).slice(0, 4).map((item) => {
+                const dateText = item.nextRunDate === todayInDhaka() ? 'Due today' : dateLabel.format(new Date(`${item.nextRunDate}T12:00:00`))
+                return <article className="upcoming-item" key={item.id}>
+                  <span className={`upcoming-type ${item.type === 'INCOME' ? 'income' : 'expense'}`} aria-hidden="true">{item.type === 'INCOME' ? '↙' : '↗'}</span>
+                  <div className="upcoming-copy"><strong>{item.category}</strong><span>{item.frequency.toLowerCase()} · {dateText}</span></div>
+                  <strong className={item.type === 'INCOME' ? 'income-text' : 'expense-text'}>{money.format(item.amount)}</strong>
+                </article>
+              })}</div>}
+        </section>}
+
         {route === '/transactions' && <div className="dashboard-columns">
           <section className="panel transaction-panel" aria-labelledby="activity-heading">
             <div className="panel-heading transaction-heading"><div><p className="eyebrow">YOUR ACTIVITY</p><h2 id="activity-heading">Transactions</h2></div>

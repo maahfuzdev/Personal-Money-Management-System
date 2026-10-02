@@ -420,6 +420,16 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .import-preview-row strong.duplicate { color: #9b6a14; }
 .import-preview-row strong.invalid { color: #ad4646; }
 .import-confirm { width: auto; min-height: 38px; padding: 0 14px; }
+.upcoming-panel { margin-top: 20px; }
+.upcoming-list { display: grid; }
+.upcoming-item { display: flex; align-items: center; gap: 11px; padding: 12px 22px; border-top: 1px solid #eff3f0; }
+.upcoming-type { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 9px; font-size: 15px; font-weight: 700; }
+.upcoming-type.income { background: #edf7ef; color: #38774c; }
+.upcoming-type.expense { background: #fff1ed; color: #b25441; }
+.upcoming-copy { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.upcoming-copy strong { overflow: hidden; color: #34453a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming-copy span { color: #87938b; font-size: 10px; text-transform: capitalize; }
+.upcoming-item > strong { white-space: nowrap; font-size: 12px; }
 .clear-filters { min-height: 34px; padding: 0 9px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #6f7d74; cursor: pointer; font-size: 9px; font-weight: 600; white-space: nowrap; }
 .clear-filters:hover:not(:disabled) { border-color: #e5ebe6; background: #f7f9f7; color: #236744; }
 .clear-filters:disabled { color: #aab3ac; cursor: default; }
