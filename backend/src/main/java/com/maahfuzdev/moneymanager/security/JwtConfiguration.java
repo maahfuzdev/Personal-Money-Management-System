@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -39,6 +40,7 @@ public class JwtConfiguration {
     }
 
     @Bean
+    @Primary
     JwtDecoder jwtDecoder(
             SecretKey jwtSecretKey,
             @Value("${JWT_ISSUER:personal-money-manager}") String issuer) {

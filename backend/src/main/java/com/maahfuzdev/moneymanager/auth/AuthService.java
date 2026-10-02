@@ -12,6 +12,8 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
     private final Clock clock;
+    private final JwtDecoder googleIdTokenDecoder;
     private final String issuer;
     private final Duration tokenLifetime;
     private final Duration refreshTokenLifetime;
@@ -47,6 +50,7 @@ public class AuthService {
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
             JwtEncoder jwtEncoder,
+            @Qualifier("googleIdTokenDecoder") JwtDecoder googleIdTokenDecoder,
             Clock clock,
             @Value("${JWT_ISSUER:personal-money-manager}") String issuer,
             @Value("${JWT_ACCESS_TOKEN_MINUTES:15}") long accessTokenMinutes,
@@ -56,6 +60,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
+        this.googleIdTokenDecoder = googleIdTokenDecoder;
         this.clock = clock;
         this.issuer = issuer;
         this.tokenLifetime = Duration.ofMinutes(accessTokenMinutes);
@@ -89,6 +94,29 @@ public class AuthService {
 
         AppUser user = userRepository.findByEmail(email)
                 .orElseThrow(InvalidCredentialsException::new);
+        return issueTokens(user, UUID.randomUUID().toString());
+    }
+
+    @Transactional
+    public AuthResponse googleSignIn(String idToken) {
+        org.springframework.security.oauth2.jwt.Jwt googleToken;
+        try {
+            googleToken = googleIdTokenDecoder.decode(idToken);
+        } catch (org.springframework.security.oauth2.jwt.JwtException exception) {
+            throw new InvalidCredentialsException();
+        }
+        if (!Boolean.TRUE.equals(googleToken.getClaim("email_verified"))) {
+            throw new InvalidCredentialsException();
+        }
+        String verifiedEmail = googleToken.getClaimAsString("email");
+        if (verifiedEmail == null || verifiedEmail.isBlank()) throw new InvalidCredentialsException();
+        String email = normalizeEmail(verifiedEmail);
+        AppUser user = userRepository.findByEmail(email).orElseGet(() -> {
+            String name = googleToken.getClaimAsString("name");
+            if (name == null || name.isBlank()) name = email.substring(0, email.indexOf('@'));
+            return userRepository.save(new AppUser(name.substring(0, Math.min(name.length(), 100)), email,
+                    passwordEncoder.encode(UUID.randomUUID().toString())));
+        });
         return issueTokens(user, UUID.randomUUID().toString());
     }
 

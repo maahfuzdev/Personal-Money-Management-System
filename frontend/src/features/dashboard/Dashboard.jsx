@@ -3,7 +3,9 @@ import {
   createTransaction,
   createBudget,
   createGoal,
+  createRecurringTransaction,
   deleteGoal,
+  deleteRecurringTransaction,
   deleteBudget,
   deleteTransaction,
   exportTransactions,
@@ -11,22 +13,26 @@ import {
   getCategorySuggestions,
   getDashboardAnalytics,
   getGoals,
+  getRecurringTransactions,
   getTransactionSummary,
   getTransactions,
   updateTransaction,
   updateBudget,
   updateGoal,
+  setRecurringTransactionActive,
 } from '../../api/transactionApi.js'
 
 const currentMonth = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
+const todayInDhaka = () => new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().slice(0, 10)
 const emptyForm = () => ({
   type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
 })
 const emptyBudget = () => ({ category: '', monthlyLimit: '', month: currentMonth() })
 const emptyGoal = () => ({ name: '', targetAmount: '', currentAmount: '0', targetDate: '', note: '' })
+const emptyRecurring = () => ({ type: 'EXPENSE', amount: '', category: '', note: '', frequency: 'MONTHLY', startDate: todayInDhaka(), endDate: '' })
 
 const money = new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 })
 const dateLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -36,6 +42,7 @@ const NAV_ITEMS = [
   { path: '/transactions', label: 'Transactions', icon: 'transactions' },
   { path: '/budgets', label: 'Budgets', icon: 'budgets' },
   { path: '/goals', label: 'Savings goals', icon: 'goals' },
+  { path: '/recurring', label: 'Recurring', icon: 'recurring' },
   { path: '/reports', label: 'Reports', icon: 'reports' },
 ]
 
@@ -44,6 +51,7 @@ const PAGE_COPY = {
   '/transactions': ['YOUR ACTIVITY', 'Transactions', 'Review, search, and manage the money moving in and out.'],
   '/budgets': ['PLAN WITH CONFIDENCE', 'Budgets', 'Set monthly limits and keep your spending on track.'],
   '/goals': ['MAKE IT HAPPEN', 'Savings goals', 'Give your savings a purpose and celebrate each milestone.'],
+  '/recurring': ['STAY AHEAD', 'Recurring transactions', 'Schedule regular income and expenses so your records stay up to date.'],
   '/reports': ['UNDERSTAND YOUR HABITS', 'Reports', 'Explore your cash flow and see where your money goes.'],
 }
 
@@ -77,6 +85,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [budgetError, setBudgetError] = useState('')
   const [isSavingBudget, setIsSavingBudget] = useState(false)
   const [goals, setGoals] = useState([])
+  const [recurringTransactions, setRecurringTransactions] = useState([])
+  const [recurringForm, setRecurringForm] = useState(emptyRecurring)
+  const [recurringError, setRecurringError] = useState('')
+  const [isSavingRecurring, setIsSavingRecurring] = useState(false)
   const [goalForm, setGoalForm] = useState(emptyGoal)
   const [editingGoalId, setEditingGoalId] = useState(null)
   const [goalError, setGoalError] = useState('')
@@ -89,7 +101,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics] = await Promise.all([
+      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring] = await Promise.all([
         getTransactions(session.token, {
           page: transactionPage,
           size: 10,
@@ -102,6 +114,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         getBudgets(session.token, selectedMonth),
         getGoals(session.token),
         getDashboardAnalytics(session.token, selectedMonth),
+        getRecurringTransactions(session.token),
       ])
       setTransactions(transactionResult.items)
       setTransactionPageInfo(transactionResult)
@@ -111,6 +124,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       setBudgets(monthlyBudgets)
       setGoals(savingsGoals)
       setAnalytics(monthlyAnalytics)
+      setRecurringTransactions(recurring)
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
@@ -202,6 +216,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       if (deleteTarget.kind === 'transaction') await handleDelete(deleteTarget.item)
       if (deleteTarget.kind === 'budget') await handleBudgetDelete(deleteTarget.item)
       if (deleteTarget.kind === 'goal') await handleGoalDelete(deleteTarget.item)
+      if (deleteTarget.kind === 'recurring') await handleRecurringDelete(deleteTarget.item)
       setDeleteTarget(null)
     } finally {
       isConfirmingDeleteRef.current = false
@@ -401,6 +416,51 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     try {
       await deleteGoal(session.token, goal.id)
       setSuccessMessage('Savings goal deleted.')
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    }
+  }
+
+  async function handleRecurringSubmit(event) {
+    event.preventDefault()
+    setRecurringError('')
+    setIsSavingRecurring(true)
+    try {
+      await createRecurringTransaction(session.token, {
+        ...recurringForm,
+        amount: Number(recurringForm.amount),
+        category: recurringForm.category.trim(),
+        note: recurringForm.note.trim() || null,
+        endDate: recurringForm.endDate || null,
+      })
+      setRecurringForm(emptyRecurring())
+      setSuccessMessage('Recurring transaction scheduled.')
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setRecurringError(error.message)
+    } finally {
+      setIsSavingRecurring(false)
+    }
+  }
+
+  async function handleRecurringToggle(recurring) {
+    try {
+      const updated = await setRecurringTransactionActive(session.token, recurring.id, !recurring.active)
+      setRecurringTransactions((items) => items.map((item) => item.id === updated.id ? updated : item))
+      setSuccessMessage(updated.active ? 'Recurring transaction resumed.' : 'Recurring transaction paused.')
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    }
+  }
+
+  async function handleRecurringDelete(recurring) {
+    try {
+      await deleteRecurringTransaction(session.token, recurring.id)
+      setSuccessMessage('Recurring transaction deleted.')
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -615,6 +675,33 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             </form>
           </div>
         </section>}
+        {route === '/recurring' && <section className="panel recurring-panel page-panel" aria-labelledby="recurring-heading">
+          <div className="panel-heading"><div><p className="eyebrow">AUTOMATE YOUR ROUTINE</p><h2 id="recurring-heading">Recurring transactions</h2></div></div>
+          <div className="recurring-layout">
+            <div className="recurring-list">
+              {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading schedules…</div>
+                : recurringTransactions.length === 0 ? <div className="empty-state compact"><strong>No recurring transactions yet</strong><span>Schedule rent, bills or regular income to keep your records current.</span></div>
+                  : recurringTransactions.map((item) => <RecurringCard key={item.id} item={item}
+                    onToggle={() => handleRecurringToggle(item)} onDelete={() => requestDelete('recurring', item)} />)}
+            </div>
+            <form className="recurring-form" onSubmit={handleRecurringSubmit}>
+              <h3>Schedule a transaction</h3>
+              {recurringError && <div className="form-alert" role="alert">{recurringError}</div>}
+              <div className="type-switch" role="group" aria-label="Recurring transaction type">
+                <button type="button" className={recurringForm.type === 'EXPENSE' ? 'type-option selected expense' : 'type-option'} onClick={() => setRecurringForm({ ...recurringForm, type: 'EXPENSE' })}>Expense</button>
+                <button type="button" className={recurringForm.type === 'INCOME' ? 'type-option selected income' : 'type-option'} onClick={() => setRecurringForm({ ...recurringForm, type: 'INCOME' })}>Income</button>
+              </div>
+              <label className="form-field"><span>Amount <small>(BDT)</small></span><input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={recurringForm.amount} onChange={(event) => setRecurringForm({ ...recurringForm, amount: event.target.value })} /></label>
+              <label className="form-field"><span>Category</span><input required maxLength="60" placeholder="e.g. Rent" value={recurringForm.category} onChange={(event) => setRecurringForm({ ...recurringForm, category: event.target.value })} /></label>
+              <label className="form-field"><span>Frequency</span><select required value={recurringForm.frequency} onChange={(event) => setRecurringForm({ ...recurringForm, frequency: event.target.value })}><option value="WEEKLY">Weekly</option><option value="MONTHLY">Monthly</option><option value="YEARLY">Yearly</option></select></label>
+              <label className="form-field"><span>First transaction date</span><input required type="date" min={todayInDhaka()} value={recurringForm.startDate} onChange={(event) => setRecurringForm({ ...recurringForm, startDate: event.target.value })} /></label>
+              <label className="form-field"><span>Last transaction date <small>(optional)</small></span><input type="date" min={recurringForm.startDate} value={recurringForm.endDate} onChange={(event) => setRecurringForm({ ...recurringForm, endDate: event.target.value })} /></label>
+              <label className="form-field"><span>Note <small>(optional)</small></span><input maxLength="500" placeholder="Add a reminder" value={recurringForm.note} onChange={(event) => setRecurringForm({ ...recurringForm, note: event.target.value })} /></label>
+              <button className="submit-button" type="submit" disabled={isSavingRecurring}>{isSavingRecurring ? 'Saving…' : 'Create schedule'}<span aria-hidden="true">→</span></button>
+            </form>
+          </div>
+        </section>}
+
         {route === '/reports' && <div className="report-note"><span aria-hidden="true">i</span><p>Reports use the transactions recorded in your account. Choose a month above to compare cash flow and category spending.</p></div>}
         {deleteTarget && <div className="confirm-overlay" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget && !isConfirmingDelete) setDeleteTarget(null)
@@ -622,12 +709,14 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           <section className="confirm-dialog" data-confirm-dialog role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
             <span className="confirm-icon" aria-hidden="true">!</span>
             <p className="eyebrow">PLEASE CONFIRM</p>
-            <h2 id="confirm-title">Delete {deleteTarget.kind === 'goal' ? 'savings goal' : deleteTarget.kind}?</h2>
+            <h2 id="confirm-title">Delete {deleteTarget.kind === 'goal' ? 'savings goal' : deleteTarget.kind === 'recurring' ? 'recurring schedule' : deleteTarget.kind}?</h2>
             <p id="confirm-description">{deleteTarget.kind === 'transaction'
               ? `This will permanently delete the ${deleteTarget.item.type.toLowerCase()} of ${money.format(deleteTarget.item.amount)} in ${deleteTarget.item.category}.`
               : deleteTarget.kind === 'budget'
                 ? `This will permanently delete the ${deleteTarget.item.category} budget for ${formatMonth(deleteTarget.item.month)}.`
-                : `This will permanently delete “${deleteTarget.item.name}” and its savings progress.`}</p>
+                : deleteTarget.kind === 'recurring'
+                  ? `This will stop future ${deleteTarget.item.frequency.toLowerCase()} ${deleteTarget.item.type.toLowerCase()} entries for ${deleteTarget.item.category}. Existing transactions stay in your account.`
+                  : `This will permanently delete “${deleteTarget.item.name}” and its savings progress.`}</p>
             <div className="confirm-actions">
               <button className="confirm-cancel" data-confirm-cancel type="button" disabled={isConfirmingDelete} onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button className="confirm-delete" type="button" aria-busy={isConfirmingDelete} onClick={confirmDelete}>{isConfirmingDelete ? 'Deleting…' : 'Delete'}</button>
@@ -678,9 +767,25 @@ function NavIcon({ name }) {
     transactions: <><path d="M7 7h13M17 4l3 3-3 3" /><path d="M17 17H4m3-3-3 3 3 3" /></>,
     budgets: <><path d="M4 19V5m0 14h17" /><path d="m7 15 4-4 3 2 5-6" /></>,
     goals: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></>,
+    recurring: <><path d="M20 7h-5l2-2" /><path d="M4 17h5l-2 2" /><path d="M6.1 9A7 7 0 0 1 18 7m-12 10a7 7 0 0 0 11.9-2" /></>,
     reports: <><path d="M5 20V10m7 10V4m7 16v-7" /><path d="M3 20h18" /></>,
   }
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{shapes[name]}</svg>
+}
+
+function RecurringCard({ item, onToggle, onDelete }) {
+  const details = `${item.frequency.charAt(0)}${item.frequency.slice(1).toLowerCase()} · ${item.type.toLowerCase()}`
+  const finished = Boolean(item.endDate && item.nextRunDate > item.endDate)
+  return <article className={`recurring-card${item.active ? '' : ' paused'}`}>
+    <div className="recurring-card-main">
+      <span className={`transaction-icon ${item.type === 'INCOME' ? 'income' : 'expense'}`} aria-hidden="true">{item.type === 'INCOME' ? '↓' : '↑'}</span>
+      <div className="recurring-card-copy"><strong>{item.category}</strong><span>{details}{item.note ? ` · ${item.note}` : ''}</span>
+        <small>{finished ? 'Schedule ended' : item.active ? `Next on ${dateLabel.format(new Date(`${item.nextRunDate}T00:00:00`))}` : 'Paused'}{item.endDate ? ` · Ends ${dateLabel.format(new Date(`${item.endDate}T00:00:00`))}` : ''}</small>
+      </div>
+      <strong className={`recurring-amount ${item.type === 'INCOME' ? 'income-text' : 'expense-text'}`}>{money.format(item.amount)}</strong>
+    </div>
+    <div className="recurring-card-actions"><button type="button" disabled={finished} onClick={onToggle}>{finished ? 'Completed' : item.active ? 'Pause' : 'Resume'}</button><button type="button" onClick={onDelete}>Delete</button></div>
+  </article>
 }
 
 function BudgetRow({ budget, onEdit, onDelete }) {

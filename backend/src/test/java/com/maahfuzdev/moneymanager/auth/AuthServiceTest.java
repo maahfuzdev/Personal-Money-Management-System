@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -42,12 +43,13 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private AuthenticationManager authenticationManager;
     @Mock private JwtEncoder jwtEncoder;
+    @Mock private JwtDecoder googleIdTokenDecoder;
 
     private AuthService service;
 
     @BeforeEach
     void setUp() {
-        service = new AuthService(users, refreshTokens, passwordEncoder, authenticationManager, jwtEncoder,
+        service = new AuthService(users, refreshTokens, passwordEncoder, authenticationManager, jwtEncoder, googleIdTokenDecoder,
                 Clock.fixed(NOW, ZoneOffset.UTC), "personal-money-manager", 15, 30);
     }
 

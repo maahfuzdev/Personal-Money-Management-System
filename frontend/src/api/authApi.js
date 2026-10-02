@@ -32,6 +32,10 @@ export function signIn({ email, password }) {
   return sendAuthRequest('/auth/login', { email, password })
 }
 
+export function signInWithGoogle(idToken) {
+  return sendAuthRequest('/auth/google', { idToken })
+}
+
 export function refreshSession(refreshToken) {
   return sendAuthRequest('/auth/refresh', { refreshToken })
 }

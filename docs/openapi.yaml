@@ -15,6 +15,7 @@ tags:
   - name: Transactions
   - name: Budgets
   - name: Savings goals
+  - name: Recurring transactions
   - name: Dashboard
 paths:
   /api/v1/auth/register:
@@ -48,6 +49,24 @@ paths:
       responses:
         '200':
           description: Tokens issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/auth/google:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Verify a Google ID token and start an application session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoogleSignInRequest' }
+      responses:
+        '200':
+          description: Application access and refresh tokens issued
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuthResponse' }
@@ -295,6 +314,64 @@ paths:
       responses:
         '204': { description: Deleted }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/recurring-transactions:
+    get:
+      tags: [Recurring transactions]
+      summary: List recurring schedules for the signed-in user
+      responses:
+        '200':
+          description: Recurring schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RecurringTransaction' }
+    post:
+      tags: [Recurring transactions]
+      summary: Create a recurring transaction schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecurringTransactionRequest' }
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecurringTransaction' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/v1/recurring-transactions/{id}/active:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      tags: [Recurring transactions]
+      summary: Pause or resume a recurring schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: { type: boolean }
+      responses:
+        '200':
+          description: Updated schedule
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecurringTransaction' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/v1/recurring-transactions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+    delete:
+      tags: [Recurring transactions]
+      summary: Delete a schedule without deleting generated transactions
+      responses:
+        '204': { description: Schedule deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/v1/dashboard/analytics:
     get:
       tags: [Dashboard]
@@ -348,6 +425,11 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string }
+    GoogleSignInRequest:
+      type: object
+      required: [idToken]
+      properties:
+        idToken: { type: string, description: Google-issued ID token }
     RefreshRequest:
       type: object
       required: [refreshToken]
@@ -433,6 +515,25 @@ components:
             completed: { type: boolean }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
+    RecurringTransactionRequest:
+      type: object
+      required: [type, amount, category, frequency, startDate]
+      properties:
+        type: { type: string, enum: [INCOME, EXPENSE] }
+        amount: { type: number, minimum: 0.01, multipleOf: 0.01 }
+        category: { type: string, minLength: 1, maxLength: 60 }
+        note: { type: [string, 'null'], maxLength: 500 }
+        frequency: { type: string, enum: [WEEKLY, MONTHLY, YEARLY] }
+        startDate: { type: string, format: date, description: Must be today or later }
+        endDate: { type: [string, 'null'], format: date, description: Optional inclusive last occurrence }
+    RecurringTransaction:
+      allOf:
+        - { $ref: '#/components/schemas/RecurringTransactionRequest' }
+        - type: object
+          properties:
+            id: { type: integer, format: int64 }
+            nextRunDate: { type: string, format: date }
+            active: { type: boolean }
     DashboardAnalytics:
       type: object
       properties:

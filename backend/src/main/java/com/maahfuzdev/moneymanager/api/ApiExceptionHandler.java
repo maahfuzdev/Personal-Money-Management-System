@@ -11,6 +11,8 @@ import com.maahfuzdev.moneymanager.dashboard.AnalyticsAccountNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.InvalidTransactionDateRangeException;
 import com.maahfuzdev.moneymanager.transaction.TransactionExportTooLargeException;
+import com.maahfuzdev.moneymanager.recurring.InvalidRecurringDateException;
+import com.maahfuzdev.moneymanager.recurring.RecurringTransactionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -99,6 +101,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SavingsGoalNotFoundException.class)
     ResponseEntity<ApiError> savingsGoalNotFound(HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "Savings goal not found.", request, Map.of());
+    }
+
+    @ExceptionHandler(RecurringTransactionNotFoundException.class)
+    ResponseEntity<ApiError> recurringTransactionNotFound(HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Recurring transaction not found.", request, Map.of());
+    }
+
+    @ExceptionHandler(InvalidRecurringDateException.class)
+    ResponseEntity<ApiError> invalidRecurringDate(HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Please choose valid recurring transaction dates.", request, Map.of());
     }
 
     @ExceptionHandler(SavingsGoalAmountException.class)

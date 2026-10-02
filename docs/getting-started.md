@@ -50,6 +50,8 @@ Set `APP_CORS_ALLOWED_ORIGIN` to the frontend origin when it is not `http://loca
 
 The browser app's API URL is supplied through `VITE_API_BASE_URL`; the local default is `http://localhost:8081/api/v1`. Production settings are in [Deployment](deployment.md).
 
+To enable Google sign-in, create a Google OAuth 2.0 **Web application** client in Google Cloud Console. Add the frontend origin (for local development, `http://localhost:5173`) to its authorized JavaScript origins. Set the same client ID as `VITE_GOOGLE_CLIENT_ID` in `frontend/.env.local` and `GOOGLE_CLIENT_ID` in the backend process environment. Restart both services after setting these values. The backend verifies Google's signed ID token and its audience before issuing the app's own session tokens. Do not place a client secret in the frontend.
+
 ## Learning in increments
 
 Each feature increment should explain the files it adds, the role of each layer, and how to run the feature. The architecture and API documents should be updated as contracts change.

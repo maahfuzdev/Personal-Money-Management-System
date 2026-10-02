@@ -137,6 +137,22 @@ export function getGoals(token) {
   return request('/goals', token)
 }
 
+export function getRecurringTransactions(token) {
+  return request('/recurring-transactions', token)
+}
+
+export function createRecurringTransaction(token, recurring) {
+  return request('/recurring-transactions', token, { method: 'POST', body: JSON.stringify(recurring) })
+}
+
+export function setRecurringTransactionActive(token, id, active) {
+  return request(`/recurring-transactions/${id}/active`, token, { method: 'PATCH', body: JSON.stringify({ active }) })
+}
+
+export function deleteRecurringTransaction(token, id) {
+  return request(`/recurring-transactions/${id}`, token, { method: 'DELETE' })
+}
+
 export function createGoal(token, goal) {
   return request('/goals', token, { method: 'POST', body: JSON.stringify(goal) })
 }

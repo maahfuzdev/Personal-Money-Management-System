@@ -70,6 +70,12 @@ function App() {
             <p className="eyebrow">PERSONAL FINANCE, MADE CLEAR</p>
             <h1>Make room for the things that matter.</h1>
             <p className="story-copy">Bring your everyday money into focus and build habits that feel good to keep.</p>
+            <div className="hero-preview" aria-label="Example monthly financial overview">
+              <div className="preview-topline"><span>MONTHLY OVERVIEW</span><span className="preview-live"><i /> On track</span></div>
+              <div className="preview-balance"><span>Available balance</span><strong>$4,820.50</strong><small>↑ 8.2% this month</small></div>
+              <div className="preview-chart" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /><i /></div>
+              <div className="preview-legend"><span><i /> Income</span><span><i /> Spending</span></div>
+            </div>
             <div className="privacy-note"><span className="privacy-icon" aria-hidden="true">✳</span><span>Your money details stay yours.</span></div>
           </div>
           <p className="story-caption">A clearer view, one step at a time.</p>

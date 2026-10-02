@@ -1,5 +1,5 @@
-import { cloneElement, useState } from 'react'
-import { registerAccount, signIn } from '../../api/authApi.js'
+import { cloneElement, useEffect, useRef, useState } from 'react'
+import { registerAccount, signIn, signInWithGoogle } from '../../api/authApi.js'
 
 function AuthScreen({ onAuthenticated }) {
   const [mode, setMode] = useState('login')
@@ -9,6 +9,32 @@ function AuthScreen({ onAuthenticated }) {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const googleButton = useRef(null)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+  useEffect(() => {
+    if (!googleClientId || !googleButton.current) return undefined
+    let attempts = 0
+    const renderGoogleButton = () => {
+      if (window.google?.accounts?.id && googleButton.current) {
+        window.google.accounts.id.initialize({ client_id: googleClientId, callback: async ({ credential }) => {
+          setError('')
+          setIsSubmitting(true)
+          try {
+            const response = await signInWithGoogle(credential)
+            onAuthenticated({ token: response.accessToken, refreshToken: response.refreshToken, user: response.user })
+          } catch (requestError) {
+            setError(requestError.message)
+          } finally {
+            setIsSubmitting(false)
+          }
+        } })
+        window.google.accounts.id.renderButton(googleButton.current, { theme: 'outline', size: 'large', shape: 'rectangular', text: 'continue_with', width: Math.min(360, googleButton.current.clientWidth) })
+      } else if (attempts++ < 30) window.setTimeout(renderGoogleButton, 100)
+    }
+    renderGoogleButton()
+    return () => { if (googleButton.current) googleButton.current.replaceChildren() }
+  }, [googleClientId, onAuthenticated])
 
   const isRegistering = mode === 'register'
 
@@ -68,6 +94,13 @@ function AuthScreen({ onAuthenticated }) {
         >
           Create account
         </button>
+      </div>
+
+      <div className="google-auth-area">
+        {googleClientId
+          ? <div className="google-button" ref={googleButton} />
+          : <button className="google-button google-unconfigured" type="button" disabled>Continue with Google <span>Set VITE_GOOGLE_CLIENT_ID to enable</span></button>}
+        <div className="auth-divider"><span>or continue with email</span></div>
       </div>
 
       <form

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ResponseEntity;
 
 @RestController
@@ -32,6 +33,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(authService.login(request));
+    }
+
+    public record GoogleSignInRequest(@NotBlank String idToken) { }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> google(@Valid @RequestBody GoogleSignInRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(authService.googleSignIn(request.idToken()));
     }
 
     @PostMapping("/refresh")

@@ -15,12 +15,15 @@ Application endpoints use `/api/v1`. The browser client receives the API base UR
 
 ## Planned resources
 
+`POST /auth/google` accepts `{ "idToken": "<Google ID token>" }`. It returns the application's normal access and refresh tokens after the backend validates Google's signature, issuer, configured client audience, and verified email. Configure `GOOGLE_CLIENT_ID` on the backend and `VITE_GOOGLE_CLIENT_ID` at frontend build time.
+
 | Resource | Purpose | Status |
 | --- | --- | --- |
 | `/auth` | Register and sign in | Implemented |
 | `/transactions` | Manage income and expenses | Implemented |
 | `/budgets` | Set and review monthly spending budgets | Implemented |
 | `/goals` | Track savings goals | Implemented |
+| `/recurring-transactions` | Schedule regular income and expenses | Implemented |
 | `/dashboard` | Return monthly totals and spending trends | Implemented |
 
 ## Transactions
@@ -120,6 +123,17 @@ Goal requests contain a `name`, positive `targetAmount`, non-negative `currentAm
   "note": "Build a six-month cushion"
 }
 ```
+
+## Recurring transactions
+
+All recurring-transaction endpoints require a bearer access token and are scoped to the signed-in account. Create a weekly, monthly, or yearly income/expense schedule with a first date and optional inclusive end date. The backend creates matching transactions automatically; when the backend was offline, overdue occurrences are caught up after it starts (up to 120 per schedule per minute). Monthly and yearly schedules retain their original day, using the last day of shorter months when needed. Pausing preserves the schedule; deleting it leaves already-created transactions in place.
+
+- `GET /api/v1/recurring-transactions` lists schedules.
+- `POST /api/v1/recurring-transactions` creates one.
+- `PATCH /api/v1/recurring-transactions/{id}/active` pauses or resumes it with `{ "active": false }` or `{ "active": true }`.
+- `DELETE /api/v1/recurring-transactions/{id}` removes the schedule.
+
+The create request accepts `type`, positive `amount`, `category`, optional `note`, `frequency` (`WEEKLY`, `MONTHLY`, or `YEARLY`), `startDate` (today or later), and optional `endDate`.
 
 ## Dashboard analytics
 
