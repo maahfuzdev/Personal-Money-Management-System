@@ -36,6 +36,31 @@ export function getTransactions(token, filters = {}) {
   return request(`/transactions?${params.toString()}`, token)
 }
 
+export async function exportTransactions(token, filters = {}) {
+  const params = new URLSearchParams()
+  if (filters.type) params.set('type', filters.type)
+  if (filters.search) params.set('search', filters.search)
+  if (filters.startDate) params.set('startDate', filters.startDate)
+  if (filters.endDate) params.set('endDate', filters.endDate)
+
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}/transactions/export.csv?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+  } catch {
+    throw new Error('Could not reach the server. Check that the backend is running and try again.')
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const error = new Error(payload?.message || 'Could not export transactions. Please try again.')
+    error.status = response.status
+    throw error
+  }
+  return response.blob()
+}
+
 export function getTransactionSummary(token) {
   return request('/transactions/summary', token)
 }

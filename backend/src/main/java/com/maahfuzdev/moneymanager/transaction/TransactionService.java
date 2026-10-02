@@ -9,11 +9,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @Transactional(readOnly = true)
 public class TransactionService {
+
+    private static final int EXPORT_PAGE_SIZE = 500;
+    private static final long MAX_EXPORT_ROWS = 10_000;
+    private static final Pattern SPREADSHEET_FORMULA_PREFIX = Pattern.compile("(?s)^\\s*[=+@\\-].*");
 
     private final TransactionRepository transactionRepository;
     private final AppUserRepository userRepository;
@@ -34,6 +41,46 @@ public class TransactionService {
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
         return new TransactionPageResponse(results.map(TransactionResponse::from).getContent(), results.getNumber(),
                 results.getSize(), results.getTotalElements(), results.getTotalPages());
+    }
+
+    public byte[] exportCsv(String email, TransactionType type, String search,
+                            LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidTransactionDateRangeException();
+        }
+        Long userId = user(email).getId();
+        String query = search == null || search.isBlank() ? null : search.trim();
+        Page<MoneyTransaction> firstPage = transactionRepository.searchByUser(userId, type, query,
+                startDate, endDate, PageRequest.of(0, EXPORT_PAGE_SIZE,
+                        Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
+        if (firstPage.getTotalElements() > MAX_EXPORT_ROWS) throw new TransactionExportTooLargeException();
+
+        StringBuilder csv = new StringBuilder("\uFEFFDate,Type,Category,Note,Amount (BDT)\r\n");
+        appendCsvRows(csv, firstPage.getContent());
+        for (int pageNumber = 1; pageNumber < firstPage.getTotalPages(); pageNumber++) {
+            List<MoneyTransaction> nextPage = transactionRepository.searchByUser(userId, type, query,
+                    startDate, endDate, PageRequest.of(pageNumber, EXPORT_PAGE_SIZE,
+                            Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))))
+                    .getContent();
+            appendCsvRows(csv, nextPage);
+        }
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void appendCsvRows(StringBuilder csv, List<MoneyTransaction> transactions) {
+        for (MoneyTransaction transaction : transactions) {
+            csv.append(transaction.getTransactionDate()).append(',')
+                    .append(transaction.getType()).append(',')
+                    .append(csvValue(transaction.getCategory())).append(',')
+                    .append(csvValue(transaction.getNote())).append(',')
+                    .append(transaction.getAmount().toPlainString()).append("\r\n");
+        }
+    }
+
+    private String csvValue(String value) {
+        if (value == null) return "\"\"";
+        String safeValue = SPREADSHEET_FORMULA_PREFIX.matcher(value).matches() ? "'" + value : value;
+        return "\"" + safeValue.replace("\"", "\"\"") + "\"";
     }
 
     @Transactional

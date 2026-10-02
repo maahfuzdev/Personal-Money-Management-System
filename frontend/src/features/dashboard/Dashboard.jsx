@@ -6,6 +6,7 @@ import {
   deleteGoal,
   deleteBudget,
   deleteTransaction,
+  exportTransactions,
   getBudgets,
   getDashboardAnalytics,
   getGoals,
@@ -45,6 +46,7 @@ function Dashboard({ session, onSignOut }) {
   const [endDate, setEndDate] = useState('')
   const [transactionPage, setTransactionPage] = useState(0)
   const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
+  const [isExporting, setIsExporting] = useState(false)
   const [budgets, setBudgets] = useState([])
   const [budgetForm, setBudgetForm] = useState(emptyBudget)
   const [budgetMonth, setBudgetMonth] = useState(currentMonth())
@@ -104,6 +106,32 @@ function Dashboard({ session, onSignOut }) {
   function changeTransactionFilter(value) {
     setFilter(value)
     setTransactionPage(0)
+  }
+
+  async function handleExport() {
+    setIsExporting(true)
+    setLoadError('')
+    try {
+      const file = await exportTransactions(session.token, {
+        type: filter === 'ALL' ? undefined : filter,
+        search: searchDraft.trim(),
+        startDate,
+        endDate,
+      })
+      const downloadUrl = URL.createObjectURL(file)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = 'transactions.csv'
+      document.body.append(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000)
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   function startEdit(transaction) {
@@ -328,6 +356,10 @@ function Dashboard({ session, onSignOut }) {
                   setEndDate(event.target.value)
                   setTransactionPage(0)
                 }} /></label>
+                <button className="export-button" type="button" onClick={handleExport}
+                  disabled={isExporting || transactionPageInfo.totalItems === 0}>
+                  {isExporting ? 'Preparing…' : 'Export CSV'}
+                </button>
               </div>
             </div>
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>

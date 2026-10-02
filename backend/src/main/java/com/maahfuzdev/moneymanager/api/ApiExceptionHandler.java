@@ -9,6 +9,7 @@ import com.maahfuzdev.moneymanager.goal.SavingsGoalNotFoundException;
 import com.maahfuzdev.moneymanager.dashboard.AnalyticsAccountNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.InvalidTransactionDateRangeException;
+import com.maahfuzdev.moneymanager.transaction.TransactionExportTooLargeException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -75,6 +76,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<ApiError> invalidQueryParameter(HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "Please check the query parameters.", request, Map.of());
+    }
+
+    @ExceptionHandler(TransactionExportTooLargeException.class)
+    ResponseEntity<ApiError> transactionExportTooLarge(HttpServletRequest request) {
+        return error(HttpStatus.CONTENT_TOO_LARGE,
+                "This export exceeds the 10,000 transaction limit. Narrow your filters and try again.", request, Map.of());
     }
 
     @ExceptionHandler(SavingsGoalNotFoundException.class)

@@ -31,6 +31,10 @@ All transaction endpoints require `Authorization: Bearer <accessToken>`. Each re
 
 `GET /api/v1/transactions?page=0&size=10&type=EXPENSE&search=food&startDate=2026-10-01&endDate=2026-10-31` returns one page of the current user's transactions, newest transaction date first. All query parameters are optional: `page` defaults to `0`, `size` defaults to `10` and is limited to `50`, `type` may be `INCOME` or `EXPENSE`, `search` matches category or note (up to 100 characters), and `startDate`/`endDate` filter inclusive ISO dates. Start date must not be after end date. Results always remain scoped to the signed-in account.
 
+`GET /api/v1/transactions/export.csv` accepts the same search, type, and date filters and downloads all matching rows as UTF-8 CSV (up to 10,000 rows per export). It includes a spreadsheet-compatible BOM; user-entered text is escaped and guarded against spreadsheet formula execution.
+
+If more than 10,000 rows match, the export endpoint returns `413 Content Too Large`; narrow the date range or other filters and retry.
+
 ```json
 {
   "items": [],

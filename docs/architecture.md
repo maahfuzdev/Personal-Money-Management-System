@@ -20,7 +20,7 @@ Backend code will be grouped by feature. Each feature keeps its HTTP controller,
 
 ## Frontend boundaries
 
-The React app keeps account access and the signed-in dashboard in feature folders, with API clients and styling separate. The dashboard supports responsive transaction search and server-side pagination, entry, editing, deletion, all-time totals, monthly cash-flow and category charts, monthly category budgets, and savings goals with progress. Forms provide labels, browser/server validation, loading states, and clear errors.
+The React app keeps account access and the signed-in dashboard in feature folders, with API clients and styling separate. The dashboard supports responsive transaction search, date/type filters, server-side pagination and CSV export, entry, editing, deletion, all-time totals, monthly cash-flow and category charts, monthly category budgets, and savings goals with progress. Forms provide labels, browser/server validation, loading states, and clear errors.
 
 ## Data and configuration
 
