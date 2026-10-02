@@ -13,6 +13,8 @@ Application endpoints use `/api/v1`. The browser client receives the API base UR
 - Monetary values use decimal JSON numbers backed by Java `BigDecimal`.
 - Dates use ISO-8601 (`YYYY-MM-DD`).
 
+`GET /api/v1/account-backup/export.json` downloads a versioned JSON snapshot of the signed-in account's transactions, budgets, savings goals, recorded goal contributions, and recurring schedules. The file contains financial data and should be stored privately.
+
 ## Planned resources
 
 `POST /auth/google` accepts `{ "idToken": "<Google ID token>" }`. It returns the application's normal access and refresh tokens after the backend validates Google's signature, issuer, configured client audience, and verified email. Configure `GOOGLE_CLIENT_ID` on the backend and `VITE_GOOGLE_CLIENT_ID` at frontend build time.

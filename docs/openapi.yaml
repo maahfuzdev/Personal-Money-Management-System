@@ -18,6 +18,16 @@ tags:
   - name: Recurring transactions
   - name: Dashboard
 paths:
+  /api/v1/account-backup/export.json:
+    get:
+      tags: [Authentication]
+      summary: Download a JSON backup of the signed-in account's financial data
+      responses:
+        '200':
+          description: Versioned JSON backup file
+          content:
+            application/json:
+              schema: { type: object }
   /api/v1/auth/register:
     post:
       tags: [Authentication]

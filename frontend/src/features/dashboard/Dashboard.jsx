@@ -10,6 +10,7 @@ import {
   deleteBudget,
   deleteTransaction,
   exportTransactions,
+  exportAccountBackup,
   previewTransactionImport,
   importTransactions,
   getBudgets,
@@ -82,6 +83,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [transactionPage, setTransactionPage] = useState(0)
   const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingBackup, setIsExportingBackup] = useState(false)
   const [importPreview, setImportPreview] = useState(null)
   const [importError, setImportError] = useState('')
   const [isImporting, setIsImporting] = useState(false)
@@ -259,6 +261,22 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  async function handleBackupExport() {
+    setIsExportingBackup(true)
+    try {
+      const blob = await exportAccountBackup(session.token)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `money-manager-backup-${todayInDhaka()}.json`
+      document.body.append(link); link.click(); link.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      setSuccessMessage('Your account backup has been downloaded.')
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    } finally { setIsExportingBackup(false) }
   }
 
   async function handleImportFile(event) {
@@ -627,6 +645,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <button className="export-button" type="button" onClick={handleExport}
                   disabled={isExporting || hasInvalidDateRange || transactionPageInfo.totalItems === 0}>
                   {isExporting ? 'Preparing…' : 'Export CSV'}
+                </button>
+                <button className="backup-button" type="button" onClick={handleBackupExport} disabled={isExportingBackup}>
+                  {isExportingBackup ? 'Preparing…' : 'Download backup'}
                 </button>
                 <label className="import-button">{isImporting && !importPreview ? 'Reading…' : 'Import CSV'}
                   <input type="file" accept=".csv,text/csv" onChange={handleImportFile} disabled={isImporting} />

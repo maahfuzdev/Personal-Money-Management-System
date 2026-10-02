@@ -25,6 +25,7 @@ public class GoalContribution {
     }
     @PrePersist void onCreate() { createdAt = Instant.now(); }
     public Long getId() { return id; }
+    public Long getGoalId() { return goal.getId(); }
     public BigDecimal getAmount() { return amount; }
     public String getNote() { return note; }
     public Instant getCreatedAt() { return createdAt; }

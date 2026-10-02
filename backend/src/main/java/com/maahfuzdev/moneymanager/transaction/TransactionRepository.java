@@ -37,6 +37,7 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
                                         Pageable pageable);
 
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);
+    List<MoneyTransaction> findAllByUserIdOrderByTransactionDateDescCreatedAtDesc(Long userId);
 
     @Query("select count(t) > 0 from MoneyTransaction t where t.user.id = :userId " +
             "and t.transactionDate = :date and t.type = :type and t.amount = :amount " +

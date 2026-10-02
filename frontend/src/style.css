@@ -418,6 +418,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .export-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce9df; border-radius: 8px; background: #f4faf5; color: #2e7148; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .export-button:hover:not(:disabled) { background: #eaf5ed; }
 .export-button:disabled { color: #a1afa5; cursor: default; }
+.backup-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce4f0; border-radius: 8px; background: #fff; color: #4b6282; cursor: pointer; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.backup-button:hover:not(:disabled) { background: #f3f6fa; }
+.backup-button:disabled { color: #a1a9b3; cursor: default; }
 .import-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce4f0; border-radius: 8px; background: #f4f7fc; color: #385b94; cursor: pointer; display: inline-flex; align-items: center; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .import-button:hover { background: #eaf0fa; }
 .import-button input { display: none; }
@@ -492,6 +495,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .date-filter { flex: 1; }
   .date-filter input { width: 100%; }
   .export-button { flex: 1; }
+  .backup-button { flex: 1; }
   .transaction-pagination { padding: 11px 14px; }
   .transaction-pagination > div { gap: 5px; }
   .transaction-pagination button { padding: 6px; }

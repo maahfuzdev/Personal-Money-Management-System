@@ -101,6 +101,17 @@ export async function exportTransactions(token, filters = {}) {
   return response.blob()
 }
 
+export async function exportAccountBackup(token) {
+  const response = await authorizedFetch('/account-backup/export.json', token)
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null)
+    const error = new Error(payload?.message || 'Could not download your backup. Please try again.')
+    error.status = response.status
+    throw error
+  }
+  return response.blob()
+}
+
 export function previewTransactionImport(token, file) {
   const data = new FormData()
   data.append('file', file)
