@@ -41,6 +41,8 @@ function Dashboard({ session, onSignOut }) {
   const [filter, setFilter] = useState('ALL')
   const [searchDraft, setSearchDraft] = useState('')
   const [search, setSearch] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [transactionPage, setTransactionPage] = useState(0)
   const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
   const [budgets, setBudgets] = useState([])
@@ -65,6 +67,8 @@ function Dashboard({ session, onSignOut }) {
           size: 10,
           type: filter === 'ALL' ? undefined : filter,
           search,
+          startDate,
+          endDate,
         }),
         getTransactionSummary(session.token),
         getBudgets(session.token, selectedMonth),
@@ -85,7 +89,7 @@ function Dashboard({ session, onSignOut }) {
     } finally {
       setIsLoading(false)
     }
-  }, [budgetMonth, filter, onSignOut, search, session.token, transactionPage])
+  }, [budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
@@ -316,6 +320,14 @@ function Dashboard({ session, onSignOut }) {
                   <option value="ALL">All activity</option><option value="INCOME">Income</option><option value="EXPENSE">Expenses</option>
                 </select>
                 </label>
+                <label className="date-filter"><span>From</span><input type="date" value={startDate} onChange={(event) => {
+                  setStartDate(event.target.value)
+                  setTransactionPage(0)
+                }} /></label>
+                <label className="date-filter"><span>To</span><input type="date" value={endDate} onChange={(event) => {
+                  setEndDate(event.target.value)
+                  setTransactionPage(0)
+                }} /></label>
               </div>
             </div>
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>

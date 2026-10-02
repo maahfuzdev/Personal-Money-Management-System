@@ -29,7 +29,7 @@ All transaction endpoints require `Authorization: Bearer <accessToken>`. Each re
 
 ### List transactions
 
-`GET /api/v1/transactions?page=0&size=10&type=EXPENSE&search=food` returns one page of the current user's transactions, newest transaction date first. All query parameters are optional: `page` defaults to `0`, `size` defaults to `10` and is limited to `50`, `type` may be `INCOME` or `EXPENSE`, and `search` matches category or note (up to 100 characters). Results always remain scoped to the signed-in account.
+`GET /api/v1/transactions?page=0&size=10&type=EXPENSE&search=food&startDate=2026-10-01&endDate=2026-10-31` returns one page of the current user's transactions, newest transaction date first. All query parameters are optional: `page` defaults to `0`, `size` defaults to `10` and is limited to `50`, `type` may be `INCOME` or `EXPENSE`, `search` matches category or note (up to 100 characters), and `startDate`/`endDate` filter inclusive ISO dates. Start date must not be after end date. Results always remain scoped to the signed-in account.
 
 ```json
 {

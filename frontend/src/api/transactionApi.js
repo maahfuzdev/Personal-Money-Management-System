@@ -31,6 +31,8 @@ export function getTransactions(token, filters = {}) {
   params.set('size', String(filters.size ?? 10))
   if (filters.type) params.set('type', filters.type)
   if (filters.search) params.set('search', filters.search)
+  if (filters.startDate) params.set('startDate', filters.startDate)
+  if (filters.endDate) params.set('endDate', filters.endDate)
   return request(`/transactions?${params.toString()}`, token)
 }
 

@@ -292,9 +292,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .category-fill.shade-3 { background: #819fa2; }
 .selected-month-label { padding: 7px 11px; border-radius: 999px; background: #edf5ef; color: #397a57; font-size: 10px; font-weight: 600; }
 .transaction-heading { gap: 14px; }
-.transaction-toolbar { display: flex; align-items: center; gap: 8px; }
+.transaction-toolbar { display: flex; align-items: center; justify-content: end; gap: 8px; flex-wrap: wrap; }
 .transaction-search input { width: clamp(135px, 18vw, 210px); min-height: 36px; padding: 0 10px; border: 1px solid #e5ebe6; border-radius: 8px; color: #435147; font-size: 10px; }
 .transaction-search input::placeholder { color: #a2aca5; }
+.date-filter { display: grid; gap: 3px; color: #8b968e; font-size: 8px; }
+.date-filter input { width: 126px; min-height: 30px; padding: 0 6px; border: 1px solid #e5ebe6; border-radius: 7px; color: #526258; font: inherit; font-size: 9px; }
 .transaction-pagination { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 22px; border-top: 1px solid #eef2ef; color: #8a958d; font-size: 9px; }
 .transaction-pagination > div { display: flex; align-items: center; gap: 9px; }
 .transaction-pagination button { padding: 6px 8px; border: 1px solid #e5ebe6; border-radius: 7px; background: white; color: #526258; cursor: pointer; font-size: 9px; }
@@ -341,6 +343,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .transaction-toolbar { width: 100%; }
   .transaction-search { flex: 1; }
   .transaction-search input { width: 100%; }
+  .date-filter { flex: 1; }
+  .date-filter input { width: 100%; }
   .transaction-pagination { padding: 11px 14px; }
   .transaction-pagination > div { gap: 5px; }
   .transaction-pagination button { padding: 6px; }

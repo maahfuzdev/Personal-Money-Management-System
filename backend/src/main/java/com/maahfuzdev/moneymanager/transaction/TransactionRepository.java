@@ -15,15 +15,21 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
 
     @Query(value = "select t from MoneyTransaction t where t.user.id = :userId " +
             "and (:type is null or t.type = :type) " +
+            "and (:startDate is null or t.transactionDate >= :startDate) " +
+            "and (:endDate is null or t.transactionDate <= :endDate) " +
             "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
             "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ",
             countQuery = "select count(t) from MoneyTransaction t where t.user.id = :userId " +
                     "and (:type is null or t.type = :type) " +
+                    "and (:startDate is null or t.transactionDate >= :startDate) " +
+                    "and (:endDate is null or t.transactionDate <= :endDate) " +
                     "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
                     "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ")
     Page<MoneyTransaction> searchByUser(@Param("userId") Long userId,
                                         @Param("type") TransactionType type,
                                         @Param("search") String search,
+                                        @Param("startDate") LocalDate startDate,
+                                        @Param("endDate") LocalDate endDate,
                                         Pageable pageable);
 
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);

@@ -8,11 +8,13 @@ import com.maahfuzdev.moneymanager.goal.SavingsGoalAmountException;
 import com.maahfuzdev.moneymanager.goal.SavingsGoalNotFoundException;
 import com.maahfuzdev.moneymanager.dashboard.AnalyticsAccountNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
+import com.maahfuzdev.moneymanager.transaction.InvalidTransactionDateRangeException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -50,6 +52,11 @@ public class ApiExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "Transaction not found.", request, Map.of());
     }
 
+    @ExceptionHandler(InvalidTransactionDateRangeException.class)
+    ResponseEntity<ApiError> invalidTransactionDateRange(HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Start date must be on or before end date.", request, Map.of());
+    }
+
     @ExceptionHandler(BudgetNotFoundException.class)
     ResponseEntity<ApiError> budgetNotFound(HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "Budget not found.", request, Map.of());
@@ -63,6 +70,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     ResponseEntity<ApiError> constraintViolation(HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "Please check the submitted fields.", request, Map.of());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiError> invalidQueryParameter(HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Please check the query parameters.", request, Map.of());
     }
 
     @ExceptionHandler(SavingsGoalNotFoundException.class)

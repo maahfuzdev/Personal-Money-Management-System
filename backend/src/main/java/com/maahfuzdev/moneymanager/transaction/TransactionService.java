@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDate;
 
 @Service
 @Transactional(readOnly = true)
@@ -23,10 +23,14 @@ public class TransactionService {
         this.userRepository = userRepository;
     }
 
-    public TransactionPageResponse list(String email, TransactionType type, String search, int page, int size) {
+    public TransactionPageResponse list(String email, TransactionType type, String search,
+                                        LocalDate startDate, LocalDate endDate, int page, int size) {
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            throw new InvalidTransactionDateRangeException();
+        }
         AppUser user = user(email);
         String query = search == null || search.isBlank() ? null : search.trim();
-        Page<MoneyTransaction> results = transactionRepository.searchByUser(user.getId(), type, query,
+        Page<MoneyTransaction> results = transactionRepository.searchByUser(user.getId(), type, query, startDate, endDate,
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
         return new TransactionPageResponse(results.map(TransactionResponse::from).getContent(), results.getNumber(),
                 results.getSize(), results.getTotalElements(), results.getTotalPages());
