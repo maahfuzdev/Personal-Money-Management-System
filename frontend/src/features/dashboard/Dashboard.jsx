@@ -102,6 +102,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
   const activeFilterCount = [filter !== 'ALL', Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
   const hasInvalidDateRange = Boolean(startDate && endDate && startDate > endDate)
+  const budgetWarnings = budgetMonth === currentMonth()
+    ? budgets.map((budget) => ({ ...budget, usedPercent: Number(budget.monthlyLimit) > 0 ? Number(budget.spent) / Number(budget.monthlyLimit) * 100 : 0 }))
+      .filter((budget) => budget.usedPercent >= 80).sort((a, b) => b.usedPercent - a.usedPercent)
+    : []
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
@@ -691,6 +695,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               <input type="month" value={budgetMonth} disabled={Boolean(editingBudgetId)} onChange={(event) => changeBudgetMonth(event.target.value)} />
             </label>
           </div>
+          {!isLoading && budgetWarnings.length > 0 && <div className={`budget-alerts ${budgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'over-limit' : ''}`} role="status" aria-live="polite">
+            <strong>{budgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'Budget limit reached' : 'Budget heads-up'}</strong>
+            <span>{budgetWarnings.map((budget) => `${budget.category}: ${Math.round(budget.usedPercent)}% used`).join(' · ')}</span>
+          </div>}
           <div className="budget-layout">
             <div className="budget-list">
               {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading budgets…</div>

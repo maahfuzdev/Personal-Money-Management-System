@@ -301,6 +301,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .budget-heading { min-height: 84px; }
 .budget-month-label input { min-height: 36px; padding: 0 10px; border: 1px solid #e5ebe6; border-radius: 8px; background: white; color: #59675e; font: inherit; font-size: 11px; }
 .budget-month-label input:disabled { background: #f5f7f5; color: #87938b; cursor: not-allowed; }
+.budget-alerts { display: grid; gap: 4px; margin: 0 23px; padding: 12px 14px; border: 1px solid #f2dfb9; border-radius: 10px; background: #fffaf0; color: #805d1d; font-size: 11px; }
+.budget-alerts.over-limit { border-color: #f1cbc7; background: #fff6f5; color: #963e37; }
+.budget-alerts strong { font-size: 12px; }
 .budget-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .56fr); gap: 24px; padding: 21px 23px 24px; }
 .budget-list { display: grid; align-content: start; }
 .empty-state.compact { min-height: 190px; }
