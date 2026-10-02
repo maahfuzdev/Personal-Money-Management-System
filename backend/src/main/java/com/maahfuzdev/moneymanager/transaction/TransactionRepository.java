@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 public interface TransactionRepository extends JpaRepository<MoneyTransaction, Long> {
 
@@ -16,4 +17,10 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
 
     @Query("select coalesce(sum(t.amount), 0) from MoneyTransaction t where t.user.id = :userId and t.type = :type")
     BigDecimal sumAmountByUserAndType(@Param("userId") Long userId, @Param("type") TransactionType type);
+
+    @Query("select lower(t.category), sum(t.amount) from MoneyTransaction t " +
+            "where t.user.id = :userId and t.type = :type and t.transactionDate >= :start and t.transactionDate < :end " +
+            "group by lower(t.category)")
+    List<Object[]> sumExpensesByCategory(@Param("userId") Long userId, @Param("type") TransactionType type,
+                                        @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

@@ -2,8 +2,11 @@ package com.maahfuzdev.moneymanager.api;
 
 import com.maahfuzdev.moneymanager.auth.EmailAlreadyRegisteredException;
 import com.maahfuzdev.moneymanager.auth.InvalidCredentialsException;
+import com.maahfuzdev.moneymanager.budget.BudgetAlreadyExistsException;
+import com.maahfuzdev.moneymanager.budget.BudgetNotFoundException;
 import com.maahfuzdev.moneymanager.transaction.TransactionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -42,6 +45,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
     ResponseEntity<ApiError> transactionNotFound(HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "Transaction not found.", request, Map.of());
+    }
+
+    @ExceptionHandler(BudgetNotFoundException.class)
+    ResponseEntity<ApiError> budgetNotFound(HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "Budget not found.", request, Map.of());
+    }
+
+    @ExceptionHandler(BudgetAlreadyExistsException.class)
+    ResponseEntity<ApiError> budgetAlreadyExists(HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "A budget already exists for this category and month.", request, Map.of());
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiError> constraintViolation(HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "Please check the submitted fields.", request, Map.of());
     }
 
     private ResponseEntity<ApiError> error(

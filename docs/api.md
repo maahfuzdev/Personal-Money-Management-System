@@ -19,7 +19,7 @@ All application endpoints will use `/api/v1`. The browser client receives the AP
 | --- | --- | --- |
 | `/auth` | Register and sign in | Implemented |
 | `/transactions` | Manage income and expenses | Implemented |
-| `/budgets` | Set and review spending budgets | Planned |
+| `/budgets` | Set and review monthly spending budgets | Implemented |
 | `/goals` | Track savings goals | Planned |
 | `/dashboard` | Return summary totals and trends | Planned |
 
@@ -62,6 +62,25 @@ All transaction endpoints require `Authorization: Bearer <accessToken>`. Each re
   "totalIncome": 2500.00,
   "totalExpense": 42.50,
   "balance": 2457.50
+}
+```
+
+## Monthly budgets
+
+All budget endpoints require a bearer access token and are scoped to the signed-in account. A category may have one budget per month; duplicate category/month pairs return `409 Conflict`. Spending totals include only `EXPENSE` transactions in that category and month (case-insensitive category match).
+
+- `GET /api/v1/budgets?month=2026-10` lists budgets for a month. The `month` query is optional and defaults to the current month.
+- `POST /api/v1/budgets` creates a budget with `category`, positive `monthlyLimit`, and `month` (`YYYY-MM`).
+- `PUT /api/v1/budgets/{id}` replaces those budget fields.
+- `DELETE /api/v1/budgets/{id}` returns `204 No Content`.
+
+List and write responses include the calculated `spent` and `remaining` values for each category. Missing or non-owned IDs return `404 Not Found`.
+
+```json
+{
+  "category": "Food",
+  "monthlyLimit": 12000.00,
+  "month": "2026-10"
 }
 ```
 

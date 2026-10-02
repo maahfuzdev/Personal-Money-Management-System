@@ -44,3 +44,19 @@ export function updateTransaction(token, id, transaction) {
 export function deleteTransaction(token, id) {
   return request(`/transactions/${id}`, token, { method: 'DELETE' })
 }
+
+export function getBudgets(token, month) {
+  return request(`/budgets?month=${encodeURIComponent(month)}`, token)
+}
+
+export function createBudget(token, budget) {
+  return request('/budgets', token, { method: 'POST', body: JSON.stringify(budget) })
+}
+
+export function updateBudget(token, id, budget) {
+  return request(`/budgets/${id}`, token, { method: 'PUT', body: JSON.stringify(budget) })
+}
+
+export function deleteBudget(token, id) {
+  return request(`/budgets/${id}`, token, { method: 'DELETE' })
+}

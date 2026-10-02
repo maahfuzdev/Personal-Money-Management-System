@@ -1,15 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   createTransaction,
+  createBudget,
+  deleteBudget,
   deleteTransaction,
+  getBudgets,
   getTransactionSummary,
   getTransactions,
   updateTransaction,
+  updateBudget,
 } from '../../api/transactionApi.js'
 
+const currentMonth = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
 const emptyForm = () => ({
   type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
 })
+const emptyBudget = () => ({ category: '', monthlyLimit: '', month: currentMonth() })
 
 const money = new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT', maximumFractionDigits: 2 })
 const dateLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -24,23 +33,31 @@ function Dashboard({ session, onSignOut }) {
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [filter, setFilter] = useState('ALL')
+  const [budgets, setBudgets] = useState([])
+  const [budgetForm, setBudgetForm] = useState(emptyBudget)
+  const [budgetMonth, setBudgetMonth] = useState(currentMonth())
+  const [editingBudgetId, setEditingBudgetId] = useState(null)
+  const [budgetError, setBudgetError] = useState('')
+  const [isSavingBudget, setIsSavingBudget] = useState(false)
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [items, totals] = await Promise.all([
+      const [items, totals, monthlyBudgets] = await Promise.all([
         getTransactions(session.token),
         getTransactionSummary(session.token),
+        getBudgets(session.token, selectedMonth),
       ])
       setTransactions(items)
       setSummary(totals)
+      setBudgets(monthlyBudgets)
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
     } finally {
       setIsLoading(false)
     }
-  }, [onSignOut, session.token])
+  }, [budgetMonth, onSignOut, session.token])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
@@ -89,6 +106,50 @@ function Dashboard({ session, onSignOut }) {
     if (!window.confirm(`Delete this ${transaction.type.toLowerCase()} of ${money.format(transaction.amount)}?`)) return
     try {
       await deleteTransaction(session.token, transaction.id)
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setLoadError(error.message)
+    }
+  }
+
+  function startBudgetEdit(budget) {
+    setEditingBudgetId(budget.id)
+    setBudgetForm({ category: budget.category, monthlyLimit: String(budget.monthlyLimit), month: budget.month })
+    setBudgetError('')
+    document.querySelector('#budget-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function cancelBudgetEdit() {
+    setEditingBudgetId(null)
+    setBudgetForm({ ...emptyBudget(), month: budgetMonth })
+    setBudgetError('')
+  }
+
+  async function handleBudgetSubmit(event) {
+    event.preventDefault()
+    setBudgetError('')
+    setIsSavingBudget(true)
+    const payload = { ...budgetForm, category: budgetForm.category.trim(), monthlyLimit: Number(budgetForm.monthlyLimit) }
+    try {
+      if (editingBudgetId) await updateBudget(session.token, editingBudgetId, payload)
+      else await createBudget(session.token, payload)
+      setBudgetMonth(payload.month)
+      setEditingBudgetId(null)
+      setBudgetForm({ ...emptyBudget(), month: payload.month })
+      await loadDashboard(payload.month)
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setBudgetError(error.message)
+    } finally {
+      setIsSavingBudget(false)
+    }
+  }
+
+  async function handleBudgetDelete(budget) {
+    if (!window.confirm(`Delete the ${budget.category} budget for ${budget.month}?`)) return
+    try {
+      await deleteBudget(session.token, budget.id)
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -168,6 +229,34 @@ function Dashboard({ session, onSignOut }) {
             </form>
           </section>
         </div>
+
+        <section className="panel budgets-panel" aria-labelledby="budgets-heading">
+          <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
+            <label className="budget-month-label"><span className="sr-only">Budget month</span>
+              <input type="month" value={budgetMonth} onChange={(event) => {
+                setBudgetMonth(event.target.value)
+                setBudgetForm({ ...emptyBudget(), month: event.target.value })
+                setEditingBudgetId(null)
+              }} />
+            </label>
+          </div>
+          <div className="budget-layout">
+            <div className="budget-list">
+              {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading budgets…</div>
+                : budgets.length === 0 ? <div className="empty-state compact"><strong>No budgets for this month yet</strong><span>Set a limit and keep an eye on your spending.</span></div>
+                  : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} onEdit={() => startBudgetEdit(budget)} onDelete={() => handleBudgetDelete(budget)} />)}
+            </div>
+            <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
+              <h3>{editingBudgetId ? 'Edit budget' : 'Set a category limit'}</h3>
+              {budgetError && <div className="form-alert" role="alert">{budgetError}</div>}
+              <label className="form-field"><span>Category</span><input required maxLength="60" placeholder="e.g. Food" value={budgetForm.category} onChange={(event) => setBudgetForm({ ...budgetForm, category: event.target.value })} /></label>
+              <label className="form-field"><span>Monthly limit <small>(BDT)</small></span><input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={budgetForm.monthlyLimit} onChange={(event) => setBudgetForm({ ...budgetForm, monthlyLimit: event.target.value })} /></label>
+              <label className="form-field"><span>Month</span><input required type="month" value={budgetForm.month} onChange={(event) => setBudgetForm({ ...budgetForm, month: event.target.value })} /></label>
+              <button className="submit-button" type="submit" disabled={isSavingBudget}>{isSavingBudget ? 'Saving…' : editingBudgetId ? 'Save budget' : 'Create budget'}<span aria-hidden="true">→</span></button>
+              {editingBudgetId && <button className="cancel-edit" type="button" onClick={cancelBudgetEdit}>Cancel editing</button>}
+            </form>
+          </div>
+        </section>
         <footer className="dashboard-footer">Your financial space, thoughtfully organized.</footer>
       </div>
     </main>
@@ -186,6 +275,23 @@ function TransactionRow({ transaction, onEdit, onDelete }) {
     <div className="transaction-info"><strong>{transaction.category}</strong><span>{transaction.note || (isIncome ? 'Income' : 'Expense')} <i>·</i> {dateLabel.format(new Date(`${transaction.transactionDate}T00:00:00`))}</span></div>
     <strong className={`transaction-amount ${isIncome ? 'income' : 'expense'}`}>{isIncome ? '+' : '−'}{money.format(transaction.amount)}</strong>
     <div className="row-actions"><button type="button" onClick={onEdit} aria-label={`Edit ${transaction.category}`}>Edit</button><button type="button" onClick={onDelete} aria-label={`Delete ${transaction.category}`}>Delete</button></div>
+  </article>
+}
+
+function BudgetRow({ budget, onEdit, onDelete }) {
+  const spent = Number(budget.spent)
+  const limit = Number(budget.monthlyLimit)
+  const percent = limit > 0 ? (spent / limit) * 100 : 0
+  const overBudget = percent > 100
+  const progress = Math.min(percent, 100)
+  return <article className="budget-row">
+    <div className="budget-row-top"><div><strong>{budget.category}</strong><span>{money.format(spent)} spent of {money.format(limit)}</span></div>
+      <div className="budget-row-actions"><button type="button" onClick={onEdit} aria-label={`Edit ${budget.category} budget`}>Edit</button><button type="button" onClick={onDelete} aria-label={`Delete ${budget.category} budget`}>Delete</button></div>
+    </div>
+    <div className="budget-progress" role="progressbar" aria-label={`${budget.category} budget used`} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
+      <span className={overBudget ? 'over-budget' : ''} style={{ width: `${progress}%` }} />
+    </div>
+    <span className={overBudget ? 'budget-remaining over-budget' : 'budget-remaining'}>{overBudget ? `${money.format(Math.abs(Number(budget.remaining)))} over limit` : `${money.format(budget.remaining)} remaining`}</span>
   </article>
 }
 
