@@ -1353,15 +1353,18 @@ function CashFlowChart({ trend }) {
   if (!trend.length || trend.every((month) => Number(month.income) === 0 && Number(month.expense) === 0)) {
     return <div className="empty-state chart-empty">Add transactions to see your six-month cash flow.</div>
   }
-  const maximum = Math.max(1, ...trend.flatMap((month) => [Number(month.income), Number(month.expense)]))
-  return <div className="cashflow-chart" role="img" aria-label="Income and expense comparison for the selected month and previous five months">
-    <div className="chart-legend"><span><i className="legend-income" />Income</span><span><i className="legend-expense" />Expenses</span></div>
+  const maximum = Math.max(1, ...trend.flatMap((month) => [Number(month.income), Number(month.expense), Math.abs(Number(month.income) - Number(month.expense))]))
+  return <div className="cashflow-chart" role="img" aria-label="Income, expense, and net cash flow comparison for the selected month and previous five months">
+    <div className="chart-legend"><span><i className="legend-income" />Income</span><span><i className="legend-expense" />Expenses</span><span><i className="legend-net" />Net cash flow</span></div>
     <div className="chart-columns">{trend.map((month) => {
       const incomeHeight = Number(month.income) / maximum * 100
       const expenseHeight = Number(month.expense) / maximum * 100
+      const netCashFlow = Number(month.income) - Number(month.expense)
+      const netHeight = Math.abs(netCashFlow) / maximum * 100
       return <div className="chart-month" key={month.month}>
         <div className="chart-bars"><span className="chart-bar-income" style={{ height: `${incomeHeight}%` }} title={`Income ${money.format(month.income)}`} />
-          <span className="chart-bar-expense" style={{ height: `${expenseHeight}%` }} title={`Expenses ${money.format(month.expense)}`} /></div>
+          <span className="chart-bar-expense" style={{ height: `${expenseHeight}%` }} title={`Expenses ${money.format(month.expense)}`} />
+          <span className={`chart-bar-net${netCashFlow < 0 ? ' negative' : ''}`} style={{ height: `${netHeight}%` }} title={`Net cash flow ${money.format(netCashFlow)}`} /></div>
         <span>{monthShortLabel.format(new Date(`${month.month}-01T00:00:00`))}</span>
       </div>
     })}</div>
