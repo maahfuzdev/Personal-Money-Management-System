@@ -128,6 +128,22 @@ export function getTransactionSummary(token) {
   return request('/transactions/summary', token)
 }
 
+export function getMoneyAccounts(token) {
+  return request('/accounts', token)
+}
+
+export function createMoneyAccount(token, account) {
+  return request('/accounts', token, { method: 'POST', body: JSON.stringify(account) })
+}
+
+export function getMoneyTransfers(token) {
+  return request('/accounts/transfers', token)
+}
+
+export function createMoneyTransfer(token, transfer) {
+  return request('/accounts/transfers', token, { method: 'POST', body: JSON.stringify(transfer) })
+}
+
 export function createTransaction(token, transaction) {
   return request('/transactions', token, { method: 'POST', body: JSON.stringify(transaction) })
 }

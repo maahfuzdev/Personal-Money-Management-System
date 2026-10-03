@@ -2,6 +2,9 @@ package com.maahfuzdev.moneymanager.transaction;
 
 import com.maahfuzdev.moneymanager.user.AppUser;
 import com.maahfuzdev.moneymanager.user.AppUserRepository;
+import com.maahfuzdev.moneymanager.account.AccountType;
+import com.maahfuzdev.moneymanager.account.MoneyAccount;
+import com.maahfuzdev.moneymanager.account.MoneyAccountRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -27,10 +30,17 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AppUserRepository userRepository;
+    private final MoneyAccountRepository accountRepository;
 
-    public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository) {
+    public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository,
+                              MoneyAccountRepository accountRepository) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
+    }
+
+    public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository) {
+        this(transactionRepository, userRepository, null);
     }
 
     public TransactionPageResponse list(String email, TransactionType type, String search,
@@ -62,7 +72,7 @@ public class TransactionService {
                         Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
         if (firstPage.getTotalElements() > MAX_EXPORT_ROWS) throw new TransactionExportTooLargeException();
 
-        StringBuilder csv = new StringBuilder("\uFEFFDate,Type,Category,Note,Amount (BDT)\r\n");
+        StringBuilder csv = new StringBuilder("\uFEFFDate,Type,Category,Note,Amount (BDT),Account\r\n");
         appendCsvRows(csv, firstPage.getContent());
         for (int pageNumber = 1; pageNumber < firstPage.getTotalPages(); pageNumber++) {
             List<MoneyTransaction> nextPage = transactionRepository.searchByUser(userId, type, query,
@@ -78,8 +88,10 @@ public class TransactionService {
         AppUser owner = user(email);
         String csv = new String(bytes, StandardCharsets.UTF_8).replaceFirst("^\\uFEFF", "");
         List<List<String>> records = parseCsv(csv);
-        if (records.isEmpty() || !records.get(0).stream().map(String::trim).toList()
-                .equals(List.of("Date", "Type", "Category", "Note", "Amount (BDT)")))
+        List<String> header = records.isEmpty() ? List.of() : records.get(0).stream().map(String::trim).toList();
+        boolean legacyHeader = header.equals(List.of("Date", "Type", "Category", "Note", "Amount (BDT)"));
+        boolean accountHeader = header.equals(List.of("Date", "Type", "Category", "Note", "Amount (BDT)", "Account"));
+        if (!legacyHeader && !accountHeader)
             throw new InvalidTransactionCsvException("CSV header must match the exported transaction format.");
         if (records.size() - 1 > 1000) throw new InvalidTransactionCsvException("CSV can contain at most 1,000 transactions.");
         List<TransactionImportPreview> rows = new ArrayList<>(); Set<String> seen = new HashSet<>();
@@ -88,12 +100,19 @@ public class TransactionService {
             List<String> cells = records.get(i);
             if (cells.stream().allMatch(String::isBlank)) continue;
             List<String> errors = new ArrayList<>();
-            if (cells.size() != 5) {
-                errors.add("Expected five columns.");
+            if (cells.size() != (accountHeader ? 6 : 5)) {
+                errors.add(accountHeader ? "Expected six columns." : "Expected five columns.");
                 rows.add(new TransactionImportPreview(i + 1, String.join(",", cells), "", "", "", "", false, errors, null)); invalid++; continue;
             }
             String dateText = cells.get(0).trim(), typeText = cells.get(1).trim().toUpperCase();
             String category = cells.get(2).trim(), note = cells.get(3).trim(), amountText = cells.get(4).trim();
+            String accountName = accountHeader ? cells.get(5).trim() : "";
+            Long accountId = null;
+            if (!accountName.isBlank()) {
+                accountId = accountRepository.findByUserIdAndNameIgnoreCase(owner.getId(), accountName)
+                        .map(MoneyAccount::getId).orElse(null);
+                if (accountId == null) errors.add("Account '" + accountName + "' was not found.");
+            }
             LocalDate date = null; TransactionType type = null; BigDecimal amount = null;
             try { date = LocalDate.parse(dateText); } catch (RuntimeException ex) { errors.add("Date must use YYYY-MM-DD."); }
             try { type = TransactionType.valueOf(typeText); } catch (RuntimeException ex) { errors.add("Type must be INCOME or EXPENSE."); }
@@ -101,10 +120,10 @@ public class TransactionService {
             catch (RuntimeException ex) { errors.add("Amount must be positive with at most two decimal places."); }
             if (category.isBlank() || category.length() > 60) errors.add("Category is required and must be at most 60 characters.");
             if (note.length() > 500) errors.add("Note must be at most 500 characters.");
-            TransactionRequest transaction = errors.isEmpty() ? new TransactionRequest(type, amount, category, note.isBlank() ? null : note, date) : null;
+            TransactionRequest transaction = errors.isEmpty() ? new TransactionRequest(accountId, type, amount, category, note.isBlank() ? null : note, date) : null;
             boolean duplicate = false;
             if (transaction != null) {
-                String key = date + "|" + type + "|" + amount.stripTrailingZeros() + "|" + category.toLowerCase() + "|" + (transaction.note() == null ? "" : transaction.note());
+                String key = date + "|" + type + "|" + amount.stripTrailingZeros() + "|" + category.toLowerCase() + "|" + (transaction.note() == null ? "" : transaction.note()) + "|" + accountId;
                 duplicate = !seen.add(key) || transactionRepository.existsDuplicate(owner.getId(), date, type, amount, category, transaction.note());
                 if (duplicate) duplicates++; else valid++;
             } else invalid++;
@@ -118,9 +137,9 @@ public class TransactionService {
         AppUser owner = user(email); int imported = 0, duplicates = 0; Set<String> seen = new HashSet<>();
         for (TransactionRequest request : requests) {
             String category = request.category().trim(), note = cleanNote(request.note());
-            String key = request.transactionDate() + "|" + request.type() + "|" + request.amount().stripTrailingZeros() + "|" + category.toLowerCase() + "|" + (note == null ? "" : note);
+            String key = request.transactionDate() + "|" + request.type() + "|" + request.amount().stripTrailingZeros() + "|" + category.toLowerCase() + "|" + (note == null ? "" : note) + "|" + request.accountId();
             if (!seen.add(key) || transactionRepository.existsDuplicate(owner.getId(), request.transactionDate(), request.type(), request.amount(), category, note)) { duplicates++; continue; }
-            transactionRepository.save(new MoneyTransaction(owner, request.type(), request.amount(), category, note, request.transactionDate())); imported++;
+            transactionRepository.save(new MoneyTransaction(owner, accountFor(owner, request.accountId()), request.type(), request.amount(), category, note, request.transactionDate())); imported++;
         }
         return new TransactionImportResult(imported, duplicates);
     }
@@ -148,7 +167,8 @@ public class TransactionService {
                     .append(transaction.getType()).append(',')
                     .append(csvValue(transaction.getCategory())).append(',')
                     .append(csvValue(transaction.getNote())).append(',')
-                    .append(transaction.getAmount().toPlainString()).append("\r\n");
+                    .append(transaction.getAmount().toPlainString()).append(',')
+                    .append(csvValue(transaction.getAccount().getName())).append("\r\n");
         }
     }
 
@@ -161,7 +181,7 @@ public class TransactionService {
     @Transactional
     public TransactionResponse create(String email, TransactionRequest request) {
         AppUser owner = user(email);
-        MoneyTransaction transaction = new MoneyTransaction(owner, request.type(), request.amount(),
+        MoneyTransaction transaction = new MoneyTransaction(owner, accountFor(owner, request.accountId()), request.type(), request.amount(),
                 request.category().trim(), cleanNote(request.note()), request.transactionDate());
         return TransactionResponse.from(transactionRepository.save(transaction));
     }
@@ -169,7 +189,7 @@ public class TransactionService {
     @Transactional
     public TransactionResponse update(String email, Long id, TransactionRequest request) {
         MoneyTransaction transaction = ownedTransaction(email, id);
-        transaction.update(request.type(), request.amount(), request.category().trim(), cleanNote(request.note()),
+        transaction.update(accountFor(transaction.getAccount().getUser().getId(), request.accountId()), request.type(), request.amount(), request.category().trim(), cleanNote(request.note()),
                 request.transactionDate());
         return TransactionResponse.from(transaction);
     }
@@ -183,7 +203,8 @@ public class TransactionService {
         Long userId = user(email).getId();
         BigDecimal income = transactionRepository.sumAmountByUserAndType(userId, TransactionType.INCOME);
         BigDecimal expense = transactionRepository.sumAmountByUserAndType(userId, TransactionType.EXPENSE);
-        return new TransactionSummary(income, expense, income.subtract(expense));
+        BigDecimal openingBalances = accountRepository.sumOpeningBalancesByUserId(userId);
+        return new TransactionSummary(income, expense, income.subtract(expense).add(openingBalances));
     }
 
     private MoneyTransaction ownedTransaction(String email, Long id) {
@@ -194,6 +215,23 @@ public class TransactionService {
     private AppUser user(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(TransactionNotFoundException::new);
+    }
+
+    private MoneyAccount accountFor(AppUser owner, Long accountId) {
+        return accountFor(owner.getId(), accountId);
+    }
+
+    private MoneyAccount accountFor(Long userId, Long accountId) {
+        if (accountId == null) return defaultAccount(userRepository.findById(userId).orElseThrow(TransactionNotFoundException::new));
+        return accountRepository.findByIdAndUserId(accountId, userId)
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Account not found."));
+    }
+
+    private MoneyAccount defaultAccount(AppUser owner) {
+        if (accountRepository == null) return new MoneyAccount(owner, "Cash", AccountType.CASH, BigDecimal.ZERO.setScale(2));
+        return accountRepository.findByUserIdAndNameIgnoreCase(owner.getId(), "Cash")
+                .orElseGet(() -> accountRepository.save(new MoneyAccount(owner, "Cash", AccountType.CASH, BigDecimal.ZERO.setScale(2))));
     }
 
     private String cleanNote(String note) {

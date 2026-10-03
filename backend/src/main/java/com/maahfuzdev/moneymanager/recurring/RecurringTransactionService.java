@@ -2,6 +2,9 @@ package com.maahfuzdev.moneymanager.recurring;
 
 import com.maahfuzdev.moneymanager.transaction.MoneyTransaction;
 import com.maahfuzdev.moneymanager.transaction.TransactionRepository;
+import com.maahfuzdev.moneymanager.account.AccountType;
+import com.maahfuzdev.moneymanager.account.MoneyAccount;
+import com.maahfuzdev.moneymanager.account.MoneyAccountRepository;
 import com.maahfuzdev.moneymanager.user.AppUser;
 import com.maahfuzdev.moneymanager.user.AppUserRepository;
 import org.springframework.stereotype.Service;
@@ -22,13 +25,16 @@ public class RecurringTransactionService {
     private final RecurringTransactionRepository recurringRepository;
     private final TransactionRepository transactionRepository;
     private final AppUserRepository userRepository;
+    private final MoneyAccountRepository accountRepository;
     private final Clock clock;
 
     public RecurringTransactionService(RecurringTransactionRepository recurringRepository,
-            TransactionRepository transactionRepository, AppUserRepository userRepository, Clock clock) {
+            TransactionRepository transactionRepository, AppUserRepository userRepository,
+            MoneyAccountRepository accountRepository, Clock clock) {
         this.recurringRepository = recurringRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
+        this.accountRepository = accountRepository;
         this.clock = clock;
     }
 
@@ -74,7 +80,10 @@ public class RecurringTransactionService {
                     recurring.setActive(false);
                     break;
                 }
-                transactionRepository.save(new MoneyTransaction(recurring.getUser(), recurring.getType(),
+                MoneyAccount cash = accountRepository.findByUserIdAndNameIgnoreCase(recurring.getUser().getId(), "Cash")
+                        .orElseGet(() -> accountRepository.save(new MoneyAccount(recurring.getUser(), "Cash", AccountType.CASH,
+                                java.math.BigDecimal.ZERO.setScale(2))));
+                transactionRepository.save(new MoneyTransaction(recurring.getUser(), cash, recurring.getType(),
                         recurring.getAmount(), recurring.getCategory(), recurring.getNote(), occurrenceDate));
                 recurring.recordOccurrence();
                 created++;

@@ -1,6 +1,7 @@
 package com.maahfuzdev.moneymanager.transaction;
 
 import com.maahfuzdev.moneymanager.user.AppUser;
+import com.maahfuzdev.moneymanager.account.MoneyAccount;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -31,6 +32,10 @@ public class MoneyTransaction {
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_transactions_user"))
     private AppUser user;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "account_id", nullable = false, foreignKey = @ForeignKey(name = "fk_transactions_account"))
+    private MoneyAccount account;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TransactionType type;
@@ -53,9 +58,10 @@ public class MoneyTransaction {
     protected MoneyTransaction() {
     }
 
-    public MoneyTransaction(AppUser user, TransactionType type, BigDecimal amount, String category,
+    public MoneyTransaction(AppUser user, MoneyAccount account, TransactionType type, BigDecimal amount, String category,
                             String note, LocalDate transactionDate) {
         this.user = user;
+        this.account = account;
         this.type = type;
         this.amount = amount;
         this.category = category;
@@ -63,8 +69,15 @@ public class MoneyTransaction {
         this.transactionDate = transactionDate;
     }
 
-    public void update(TransactionType type, BigDecimal amount, String category, String note,
+    public MoneyTransaction(AppUser user, TransactionType type, BigDecimal amount, String category,
+                            String note, LocalDate transactionDate) {
+        this(user, new MoneyAccount(user, "Cash", com.maahfuzdev.moneymanager.account.AccountType.CASH,
+                BigDecimal.ZERO.setScale(2)), type, amount, category, note, transactionDate);
+    }
+
+    public void update(MoneyAccount account, TransactionType type, BigDecimal amount, String category, String note,
                        LocalDate transactionDate) {
+        this.account = account;
         this.type = type;
         this.amount = amount;
         this.category = category;
@@ -78,6 +91,7 @@ public class MoneyTransaction {
     }
 
     public Long getId() { return id; }
+    public MoneyAccount getAccount() { return account; }
     public TransactionType getType() { return type; }
     public BigDecimal getAmount() { return amount; }
     public String getCategory() { return category; }

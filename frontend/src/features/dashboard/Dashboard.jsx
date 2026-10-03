@@ -21,6 +21,10 @@ import {
   getRecurringTransactions,
   getTransactionSummary,
   getTransactions,
+  getMoneyAccounts,
+  createMoneyAccount,
+  getMoneyTransfers,
+  createMoneyTransfer,
   updateTransaction,
   updateBudget,
   updateGoal,
@@ -33,7 +37,7 @@ const currentMonth = () => {
 }
 const todayInDhaka = () => new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().slice(0, 10)
 const emptyForm = () => ({
-  type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
+  accountId: '', type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
 })
 const emptyBudget = () => ({ category: '', monthlyLimit: '', month: currentMonth() })
 const emptyGoal = () => ({ name: '', targetAmount: '', currentAmount: '0', targetDate: '', note: '' })
@@ -44,6 +48,7 @@ const dateLabel = new Intl.DateTimeFormat('en', { day: 'numeric', month: 'short'
 
 const NAV_ITEMS = [
   { path: '/', label: 'Overview', icon: 'overview' },
+  { path: '/accounts', label: 'Accounts', icon: 'accounts' },
   { path: '/transactions', label: 'Transactions', icon: 'transactions' },
   { path: '/budgets', label: 'Budgets', icon: 'budgets' },
   { path: '/goals', label: 'Savings goals', icon: 'goals' },
@@ -54,6 +59,7 @@ const NAV_ITEMS = [
 const PAGE_COPY = {
   '/': ['YOUR MONEY, AT A GLANCE', 'Overview', 'A clear picture of your money, all in one place.'],
   '/transactions': ['YOUR ACTIVITY', 'Transactions', 'Review, search, and manage the money moving in and out.'],
+  '/accounts': ['YOUR MONEY, ORGANIZED', 'Accounts & wallets', 'Track Cash, bank accounts and mobile wallets separately.'],
   '/budgets': ['PLAN WITH CONFIDENCE', 'Budgets', 'Set monthly limits and keep your spending on track.'],
   '/goals': ['MAKE IT HAPPEN', 'Savings goals', 'Give your savings a purpose and celebrate each milestone.'],
   '/recurring': ['STAY AHEAD', 'Recurring transactions', 'Schedule regular income and expenses so your records stay up to date.'],
@@ -111,6 +117,14 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const route = PAGE_COPY[path] ? path : '/'
   const [eyebrow, pageTitle, pageDescription] = PAGE_COPY[route]
   const [transactions, setTransactions] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [transfers, setTransfers] = useState([])
+  const [accountDraft, setAccountDraft] = useState({ name: '', type: 'MOBILE_WALLET', openingBalance: '' })
+  const [transferDraft, setTransferDraft] = useState({ fromAccountId: '', toAccountId: '', amount: '', transferDate: todayInDhaka(), note: '' })
+  const [accountError, setAccountError] = useState('')
+  const [transferError, setTransferError] = useState('')
+  const [isSavingAccount, setIsSavingAccount] = useState(false)
+  const [isSavingTransfer, setIsSavingTransfer] = useState(false)
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -166,7 +180,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring] = await Promise.all([
+      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring, accountResult, transferResult] = await Promise.all([
         getTransactions(session.token, {
           page: transactionPage,
           size: 10,
@@ -180,6 +194,8 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         getGoals(session.token),
         getDashboardAnalytics(session.token, selectedMonth),
         getRecurringTransactions(session.token),
+        getMoneyAccounts(session.token),
+        getMoneyTransfers(session.token),
       ])
       setTransactions(transactionResult.items)
       setTransactionPageInfo(transactionResult)
@@ -190,6 +206,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       setGoals(savingsGoals)
       setAnalytics(monthlyAnalytics)
       setRecurringTransactions(recurring)
+      setAccounts(accountResult)
+      setTransfers(transferResult)
+      setForm((current) => current.accountId || !accountResult.length
+        ? current : { ...current, accountId: String(accountResult[0].id) })
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
@@ -358,6 +378,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setIsTransactionFormOpen(true)
     setEditingId(transaction.id)
     setForm({
+      accountId: String(transaction.accountId),
       type: transaction.type,
       amount: String(transaction.amount),
       category: transaction.category,
@@ -411,7 +432,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setFormError('')
     setSuccessMessage('')
     setIsSaving(true)
-    const payload = { ...form, amount: Number(form.amount), note: form.note.trim() || null }
+    const payload = { ...form, accountId: Number(form.accountId) || null, amount: Number(form.amount), note: form.note.trim() || null }
     try {
       if (editingId) await updateTransaction(session.token, editingId, payload)
       else await createTransaction(session.token, payload)
@@ -440,6 +461,49 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     } catch (error) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
+    }
+  }
+
+  async function handleCreateAccount(event) {
+    event.preventDefault()
+    setAccountError('')
+    setIsSavingAccount(true)
+    try {
+      await createMoneyAccount(session.token, {
+        ...accountDraft,
+        name: accountDraft.name.trim(),
+        openingBalance: Number(accountDraft.openingBalance || 0),
+      })
+      setAccountDraft({ name: '', type: 'MOBILE_WALLET', openingBalance: '' })
+      setSuccessMessage('Account added.')
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setAccountError(error.message)
+    } finally {
+      setIsSavingAccount(false)
+    }
+  }
+
+  async function handleCreateTransfer(event) {
+    event.preventDefault()
+    setTransferError('')
+    setIsSavingTransfer(true)
+    try {
+      await createMoneyTransfer(session.token, {
+        ...transferDraft,
+        fromAccountId: Number(transferDraft.fromAccountId),
+        toAccountId: Number(transferDraft.toAccountId),
+        amount: Number(transferDraft.amount),
+      })
+      setTransferDraft({ fromAccountId: '', toAccountId: '', amount: '', transferDate: todayInDhaka(), note: '' })
+      setSuccessMessage('Transfer recorded. Account balances are updated.')
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setTransferError(error.message)
+    } finally {
+      setIsSavingTransfer(false)
     }
   }
 
@@ -792,6 +856,11 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <button type="button" className={form.type === 'INCOME' ? 'type-option selected income' : 'type-option'} onClick={() => setForm({ ...form, type: 'INCOME' })}>Income</button>
               </div>
               {formError && <div className="form-alert" role="alert">{formError}</div>}
+              <label className="form-field"><span>Account / wallet</span>
+                <select required value={form.accountId || accounts[0]?.id || ''} onChange={(event) => setForm({ ...form, accountId: event.target.value })}>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </label>
               <div className="form-field amount-field">
                 <div className="amount-field-heading"><label htmlFor="transaction-amount">Amount <small>(BDT)</small></label>
                   <button className="calculator-toggle" type="button" aria-expanded={isAmountCalculatorOpen} aria-controls={isAmountCalculatorOpen ? 'amount-calculator' : undefined} onClick={() => {
@@ -827,6 +896,39 @@ function Dashboard({ session, onSignOut, navigate, path }) {
             </form>}
           </section>
         </div>}
+
+        {route === '/accounts' && <section className="accounts-page page-panel" aria-labelledby="accounts-heading">
+          <div className="accounts-balance-banner"><div><p className="eyebrow">ALL ACCOUNTS</p><span>Combined balance</span></div><strong>{money.format(accounts.reduce((total, account) => total + Number(account.balance || 0), 0))}</strong></div>
+          <div className="account-grid">{accounts.map((account) => <article className="account-card" key={account.id}>
+            <div className="account-card-top"><span className="account-card-icon"><NavIcon name="accounts" /></span><span>{account.type.replace('_', ' ')}</span></div>
+            <h2>{account.name}</h2><strong>{money.format(account.balance || 0)}</strong><small>Opening balance {money.format(account.openingBalance || 0)}</small>
+          </article>)}</div>
+          <div className="accounts-layout">
+            <form className="panel account-form" onSubmit={handleCreateAccount}>
+              <div className="panel-heading"><div><p className="eyebrow">ADD A PLACE TO TRACK</p><h2>New account or wallet</h2></div></div>
+              <div className="account-form-fields">{accountError && <div className="form-alert" role="alert">{accountError}</div>}
+                <label className="form-field"><span>Name</span><input required maxLength="80" placeholder="e.g. bKash, Salary account" value={accountDraft.name} onChange={(event) => setAccountDraft({ ...accountDraft, name: event.target.value })} /></label>
+                <label className="form-field"><span>Type</span><select value={accountDraft.type} onChange={(event) => setAccountDraft({ ...accountDraft, type: event.target.value })}><option value="CASH">Cash</option><option value="BANK">Bank</option><option value="MOBILE_WALLET">Mobile wallet</option><option value="CREDIT_CARD">Credit card</option><option value="OTHER">Other</option></select></label>
+                <label className="form-field"><span>Starting balance (BDT)</span><input type="number" min="0" step="0.01" value={accountDraft.openingBalance} onChange={(event) => setAccountDraft({ ...accountDraft, openingBalance: event.target.value })} placeholder="0.00" /></label>
+                <button className="submit-button" type="submit" disabled={isSavingAccount}>{isSavingAccount ? 'Saving…' : 'Add account'}<span aria-hidden="true">→</span></button>
+              </div>
+            </form>
+            <form className="panel transfer-form" onSubmit={handleCreateTransfer}>
+              <div className="panel-heading"><div><p className="eyebrow">MOVE MONEY</p><h2>Transfer between accounts</h2></div></div>
+              <div className="account-form-fields">{transferError && <div className="form-alert" role="alert">{transferError}</div>}
+                <label className="form-field"><span>From</span><select required value={transferDraft.fromAccountId} onChange={(event) => setTransferDraft({ ...transferDraft, fromAccountId: event.target.value })}><option value="">Choose account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+                <label className="form-field"><span>To</span><select required value={transferDraft.toAccountId} onChange={(event) => setTransferDraft({ ...transferDraft, toAccountId: event.target.value })}><option value="">Choose account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+                <label className="form-field"><span>Amount (BDT)</span><input required type="number" min="0.01" step="0.01" value={transferDraft.amount} onChange={(event) => setTransferDraft({ ...transferDraft, amount: event.target.value })} placeholder="0.00" /></label>
+                <label className="form-field"><span>Date</span><input required type="date" value={transferDraft.transferDate} onChange={(event) => setTransferDraft({ ...transferDraft, transferDate: event.target.value })} /></label>
+                <label className="form-field"><span>Note <small>(optional)</small></span><input maxLength="300" value={transferDraft.note} onChange={(event) => setTransferDraft({ ...transferDraft, note: event.target.value })} placeholder="e.g. Cash out" /></label>
+                <button className="submit-button" type="submit" disabled={isSavingTransfer || accounts.length < 2}>{isSavingTransfer ? 'Saving…' : 'Record transfer'}<span aria-hidden="true">→</span></button>
+              </div>
+            </form>
+          </div>
+          <section className="panel transfer-history"><div className="panel-heading"><div><p className="eyebrow">ACCOUNT ACTIVITY</p><h2>Recent transfers</h2></div></div>
+            {transfers.length === 0 ? <div className="empty-state compact"><strong>No transfers yet</strong><span>Transfers between your own accounts won’t count as income or expense.</span></div> : <div className="transfer-list">{transfers.map((transfer) => <article className="transfer-row" key={transfer.id}><span className="transfer-arrow">↗</span><div><strong>{transfer.fromAccountName} <span>to</span> {transfer.toAccountName}</strong><small>{transfer.transferDate}{transfer.note ? ` · ${transfer.note}` : ''}</small></div><b>{money.format(transfer.amount)}</b></article>)}</div>}
+          </section>
+        </section>}
 
         {route === '/budgets' && <section className="panel budgets-panel page-panel" aria-labelledby="budgets-heading">
           <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
@@ -952,7 +1054,7 @@ function SummaryCard({ label, value, kind, icon }) {
 function TransactionRow({ transaction, onEdit, onDelete }) {
   const isIncome = transaction.type === 'INCOME'
   return <article className="transaction-row"><span className={`transaction-icon ${isIncome ? 'income' : 'expense'}`} aria-hidden="true">{isIncome ? '↙' : '↗'}</span>
-    <div className="transaction-info"><strong>{transaction.category}</strong><span>{transaction.note || (isIncome ? 'Income' : 'Expense')} <i>·</i> {dateLabel.format(new Date(`${transaction.transactionDate}T00:00:00`))}</span></div>
+    <div className="transaction-info"><strong>{transaction.category}</strong><span>{transaction.accountName ? `${transaction.accountName} · ` : ''}{transaction.note || (isIncome ? 'Income' : 'Expense')} <i>·</i> {dateLabel.format(new Date(`${transaction.transactionDate}T00:00:00`))}</span></div>
     <strong className={`transaction-amount ${isIncome ? 'income' : 'expense'}`}>{isIncome ? '+' : '−'}{money.format(transaction.amount)}</strong>
     {(onEdit || onDelete) && <div className="row-actions">{onEdit && <button type="button" onClick={onEdit} aria-label={`Edit ${transaction.category}`}>Edit</button>}{onDelete && <button type="button" onClick={onDelete} aria-label={`Delete ${transaction.category}`}>Delete</button>}</div>}
   </article>
@@ -972,6 +1074,7 @@ function NavItem({ item, active, navigate, compact = false }) {
 function NavIcon({ name }) {
   const shapes = {
     overview: <><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="5" rx="2" /><rect x="13" y="10" width="8" height="11" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /></>,
+    accounts: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h4" /></>,
     transactions: <><path d="M7 7h13M17 4l3 3-3 3" /><path d="M17 17H4m3-3-3 3 3 3" /></>,
     budgets: <><path d="M4 19V5m0 14h17" /><path d="m7 15 4-4 3 2 5-6" /></>,
     goals: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></>,
