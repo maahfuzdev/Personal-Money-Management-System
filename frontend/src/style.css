@@ -199,10 +199,37 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-width: 560px) {
-  .page-content .summary-grid { grid-template-columns: 1fr; gap: 10px; }
-  .page-content .summary-card { min-height: 119px; padding: 17px 18px; }
+  .page-content { padding: 20px 13px 24px; }
+  .page-content .dashboard-welcome { gap: 7px; margin-bottom: 14px; }
+  .page-content .dashboard-welcome .eyebrow { margin-bottom: 5px; font-size: 9px; }
+  .page-content .dashboard-welcome h1 { font-size: clamp(22px, 6vw, 27px); }
+  .page-content .dashboard-welcome p:last-child { margin-top: 5px; font-size: 11px; }
+  .page-content .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .page-content .summary-card { min-height: 94px; gap: 7px; padding: 12px 13px; border-radius: 12px; }
+  .page-content .summary-card:first-child { grid-column: 1 / -1; min-height: 91px; }
+  .page-content .summary-card-top { font-size: 10px; }
+  .page-content .summary-card strong { font-size: clamp(18px, 5vw, 22px); }
+  .page-content .summary-icon { width: 28px; height: 28px; }
+  .page-content .summary-caption { font-size: 8px; }
   .page-content .dashboard-columns, .page-content .insights-grid, .page-content .goals-layout { grid-template-columns: minmax(0, 1fr); }
-  .page-content .panel-heading { padding-inline: 16px; }
+  .page-content .insights-grid { gap: 10px; margin-bottom: 12px; }
+  .page-content .panel-heading { min-height: 66px; padding: 12px 14px; }
+  .page-content .panel-heading .eyebrow { margin-bottom: 3px; font-size: 8px; }
+  .page-content .panel-heading h2 { font-size: 16px; }
+  .page-content .insight-totals { gap: 7px; padding: 11px 14px 0; }
+  .page-content .insight-totals span { font-size: 8px; }
+  .page-content .insight-totals strong { font-size: 11px; }
+  .page-content .month-comparison { margin: 8px 14px 9px; padding: 7px 9px; font-size: 9px; }
+  .page-content .cashflow-chart { padding: 11px 14px 14px; }
+  .page-content .chart-columns { height: 90px; }
+  .page-content .category-chart { grid-template-columns: 112px minmax(0, 1fr); gap: 12px; padding: 13px 14px; }
+  .page-content .category-donut { width: 112px; }
+  .page-content .category-legend { gap: 8px; }
+  .page-content .category-legend-name { font-size: 9px; }
+  .page-content .category-legend-value strong { font-size: 8px; }
+  .page-content .recent-panel .transaction-list .transaction-row:nth-child(n + 4) { display: none; }
+  .page-content .upcoming-list .upcoming-item:nth-child(n + 3) { display: none; }
+  .page-content .recent-panel, .page-content .upcoming-panel { margin-bottom: 12px; }
   .page-content .transaction-list { padding-inline: 13px; }
   .page-content .transaction-row { gap: 9px; }
   .page-content .row-actions { gap: 5px; }
