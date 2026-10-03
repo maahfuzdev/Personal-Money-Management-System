@@ -684,6 +684,24 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 .monthly-statement { display: grid; gap: 19px; margin: 20px 0; padding: 22px; border: 1px solid #e8eee9; border-radius: 16px; background: #fff; box-shadow: 0 7px 25px rgb(33 68 45 / 3%); }
+.data-health-panel { display: grid; gap: 12px; margin: 0 0 20px; padding: 20px; border: 1px solid #e8eee9; border-radius: 15px; background: #fff; box-shadow: 0 7px 25px rgb(33 68 45 / 3%); }
+.data-health-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #edf1ee; }
+.data-health-heading .eyebrow { margin: 0 0 4px; color: #71877a; font-size: 8px; letter-spacing: .1em; }
+.data-health-heading h2 { margin: 0; color: #2a3c30; font: 750 17px 'Manrope', sans-serif; }
+.data-health-heading > span { color: #89958d; font-size: 9px; }
+.data-health-help { margin: 0; color: #87938b; font-size: 10px; line-height: 1.6; }
+.data-health-clear { display: flex; align-items: center; gap: 8px; color: #32754d; font-size: 11px; }
+.data-health-clear > span { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: #eaf5ed; font-weight: 800; }
+.data-health-clear small { margin-left: auto; color: #89958d; font-size: 9px; }
+.data-health-findings { display: grid; gap: 12px; }
+.data-health-findings > section { display: grid; }
+.data-health-findings h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: #506055; font: 700 11px 'Manrope', sans-serif; }
+.data-health-findings h3 > span { display: grid; min-width: 18px; height: 18px; padding: 0 4px; place-items: center; border-radius: 20px; background: #f1f4f1; color: #748278; font: 600 9px 'DM Sans', sans-serif; }
+.data-health-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eff3f0; }
+.data-health-row > div { display: grid; min-width: 0; gap: 3px; }
+.data-health-row strong, .data-health-row b { color: #45544a; font-size: 10px; }
+.data-health-row small { overflow-wrap: anywhere; color: #89958d; font-size: 9px; }
+.data-health-row b { flex: 0 0 auto; white-space: nowrap; }
 .statement-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-bottom: 17px; border-bottom: 1px solid #eaf0eb; }
 .statement-header .eyebrow { margin: 0 0 6px; color: #518061; font-size: 9px; letter-spacing: .12em; }
 .statement-header h2 { margin: 0; color: #1e3426; font: 800 24px 'Manrope', sans-serif; letter-spacing: -.04em; }
@@ -725,6 +743,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-width: 560px) {
+  .data-health-panel { padding: 15px; }
+  .data-health-clear { align-items: flex-start; flex-wrap: wrap; }
+  .data-health-clear small { width: 100%; margin-left: 30px; }
   .monthly-statement { gap: 14px; padding: 15px; border-radius: 13px; }
   .statement-header h2 { font-size: 20px; }
   .statement-totals { gap: 7px; }

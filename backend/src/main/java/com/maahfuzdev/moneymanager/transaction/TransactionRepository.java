@@ -3,6 +3,7 @@ package com.maahfuzdev.moneymanager.transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -60,6 +61,21 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
 
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);
     List<MoneyTransaction> findAllByUserIdOrderByTransactionDateDescCreatedAtDesc(Long userId);
+
+    @Query(value = "SELECT a.name, MIN(t.category), MIN(t.note), t.transaction_date, t.type, t.amount, COUNT(*) " +
+            "FROM money_transactions t JOIN money_accounts a ON a.id = t.account_id " +
+            "WHERE t.user_id = :userId GROUP BY t.account_id, a.name, LOWER(t.category), COALESCE(t.note, ''), " +
+            "t.transaction_date, t.type, t.amount HAVING COUNT(*) > 1 ORDER BY t.transaction_date DESC LIMIT 50",
+            nativeQuery = true)
+    List<Object[]> findDuplicateGroups(@Param("userId") Long userId);
+
+    @Query("select avg(t.amount) from MoneyTransaction t where t.user.id = :userId and t.type = :type")
+    BigDecimal averageAmountByUserAndType(@Param("userId") Long userId, @Param("type") TransactionType type);
+
+    @Query("select t from MoneyTransaction t where t.user.id = :userId and t.type = :type " +
+            "and t.amount >= :threshold order by t.amount desc, t.transactionDate desc")
+    List<MoneyTransaction> findLargeTransactions(@Param("userId") Long userId, @Param("type") TransactionType type,
+                                                @Param("threshold") BigDecimal threshold, Pageable pageable);
 
     @Query("select count(t) > 0 from MoneyTransaction t where t.user.id = :userId " +
             "and t.transactionDate = :date and t.type = :type and t.amount = :amount " +

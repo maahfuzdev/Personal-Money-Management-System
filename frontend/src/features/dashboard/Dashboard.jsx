@@ -17,6 +17,7 @@ import {
   getBudgets,
   getCategorySuggestions,
   getDashboardAnalytics,
+  getDataHealth,
   getGoals,
   getGoalContributions,
   getRecurringTransactions,
@@ -188,6 +189,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [statementTransactions, setStatementTransactions] = useState([])
   const [isLoadingStatement, setIsLoadingStatement] = useState(false)
   const [statementError, setStatementError] = useState('')
+  const [dataHealth, setDataHealth] = useState(null)
+  const [isLoadingDataHealth, setIsLoadingDataHealth] = useState(false)
+  const [dataHealthError, setDataHealthError] = useState('')
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
   const reminderCutoff = dayAfter(todayInDhaka(), 7)
   const reminderItems = recurringTransactions.filter((item) => item.active && item.nextRunDate <= reminderCutoff
@@ -254,6 +258,18 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }, [accountFilter, budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
+
+  useEffect(() => {
+    if (route !== '/reports') return undefined
+    let isCurrent = true
+    setIsLoadingDataHealth(true)
+    setDataHealthError('')
+    getDataHealth(session.token)
+      .then((result) => { if (isCurrent) setDataHealth(result) })
+      .catch((error) => { if (isCurrent) setDataHealthError(error.message || 'Could not check your data.') })
+      .finally(() => { if (isCurrent) setIsLoadingDataHealth(false) })
+    return () => { isCurrent = false }
+  }, [route, session.token])
 
   useEffect(() => {
     if (route !== '/reports') return undefined
@@ -1201,6 +1217,32 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               <button className="submit-button" type="submit" disabled={isSavingRecurring}>{isSavingRecurring ? 'Saving…' : 'Create schedule'}<span aria-hidden="true">→</span></button>
             </form>
           </div>
+        </section>}
+
+        {route === '/reports' && <section className="data-health-panel" aria-labelledby="data-health-heading">
+          <div className="data-health-heading"><div><p className="eyebrow">REVIEW YOUR RECORDS</p><h2 id="data-health-heading">Data health check</h2></div>
+            {dataHealth && <span>Checked {dateLabel.format(new Date(dataHealth.checkedAt))}</span>}</div>
+          {isLoadingDataHealth ? <div className="empty-state compact"><span className="loading-dot" />Checking your records…</div>
+            : dataHealthError ? <div className="form-alert" role="alert">{dataHealthError}</div>
+              : dataHealth && <>
+                <p className="data-health-help">Possible exact duplicates, expenses at least 5× your average, and negative cash or bank balances are listed for you to review. Nothing is changed automatically.</p>
+                {dataHealth.possibleDuplicates.length === 0 && dataHealth.largeExpenses.length === 0 && dataHealth.negativeAccounts.length === 0
+                  ? <div className="data-health-clear"><span aria-hidden="true">✓</span><strong>No potential issues found.</strong><small>We checked your transactions and account balances.</small></div>
+                  : <div className="data-health-findings">
+                    {dataHealth.possibleDuplicates.length > 0 && <section><h3>Possible duplicate transactions <span>{dataHealth.possibleDuplicates.length}</span></h3>
+                      {dataHealth.possibleDuplicates.map((item) => <article className="data-health-row" key={`${item.accountName}-${item.category}-${item.date}-${item.type}-${item.amount}`}>
+                        <div><strong>{item.category} · {item.accountName}</strong><small>{item.date} · {item.type} · {item.copies} matching entries{item.note ? ` · ${item.note}` : ''}</small></div><b>{money.format(item.amount)}</b>
+                      </article>)}</section>}
+                    {dataHealth.largeExpenses.length > 0 && <section><h3>Unusually large expenses <span>{dataHealth.largeExpenses.length}</span></h3>
+                      {dataHealth.largeExpenses.map((item) => <article className="data-health-row" key={item.transactionId}>
+                        <div><strong>{item.category} · {item.accountName}</strong><small>{item.date}{item.note ? ` · ${item.note}` : ''}</small></div><b>{money.format(item.amount)}</b>
+                      </article>)}</section>}
+                    {dataHealth.negativeAccounts.length > 0 && <section><h3>Accounts below zero <span>{dataHealth.negativeAccounts.length}</span></h3>
+                      {dataHealth.negativeAccounts.map((item) => <article className="data-health-row" key={item.accountId}>
+                        <div><strong>{item.name}</strong><small>{item.type} balance</small></div><b className="expense-text">{money.format(item.balance)}</b>
+                      </article>)}</section>}
+                  </div>}
+              </>}
         </section>}
 
         {route === '/reports' && <section className="monthly-statement" aria-labelledby="statement-heading">

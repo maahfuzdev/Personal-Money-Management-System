@@ -229,3 +229,7 @@ export function deleteGoal(token, id) {
 export function getDashboardAnalytics(token, month) {
   return request(`/dashboard/analytics?month=${encodeURIComponent(month)}`, token)
 }
+
+export function getDataHealth(token) {
+  return request('/dashboard/data-health', token)
+}
