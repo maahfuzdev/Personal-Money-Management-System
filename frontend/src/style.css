@@ -275,6 +275,24 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .transaction-form .form-field { gap: 7px; color: #394a3e; font-size: 11px; font-weight: 600; }
 .transaction-form .form-field small { color: #919c94; font-size: 10px; font-weight: 400; }
 .transaction-form .form-field input { min-height: 42px; font-size: 12px; }
+.amount-field-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.amount-field-heading label { color: #394a3e; font-size: 11px; font-weight: 600; }
+.amount-field-heading label small { margin-left: 3px; }
+.calculator-toggle { padding: 5px 8px; border: 1px solid #dce8df; border-radius: 7px; background: #f8fbf8; color: #32784f; cursor: pointer; font-size: 10px; font-weight: 700; }
+.calculator-toggle:hover { border-color: #a9cbb5; background: #eff7f1; }
+.amount-calculator { display: grid; gap: 9px; padding: 12px; border: 1px solid #e4ebe5; border-radius: 12px; background: #f8faf8; }
+.calculator-expression-label { color: #77857a; font-size: 10px; font-weight: 600; }
+.transaction-form .amount-calculator .calculator-expression { min-height: 39px; background: #fff; font-size: 13px; font-variant-numeric: tabular-nums; }
+.calculator-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.calculator-keys button { min-height: 34px; border: 1px solid #e6ece7; border-radius: 7px; background: #fff; color: #34443a; cursor: pointer; font-size: 12px; font-weight: 600; transition: border-color .15s, background .15s, color .15s; }
+.calculator-keys button:hover { border-color: #bdd6c4; background: #f1f7f2; color: #286b49; }
+.calculator-keys button.operator { border-color: #dce7fa; background: #eef4ff; color: #3766b7; }
+.calculator-error { color: #a63f38; font-size: 10px; line-height: 1.4; }
+.calculator-result { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid #e5ebe6; color: #76837a; font-size: 10px; }
+.calculator-result strong { color: #22392a; font-size: 14px; font-variant-numeric: tabular-nums; }
+.calculator-use-button { min-height: 37px; border: 0; border-radius: 8px; background: #286b49; color: #fff; cursor: pointer; font-size: 11px; font-weight: 700; }
+.calculator-use-button:hover:not(:disabled) { background: #1c5c3c; }
+.calculator-use-button:disabled { cursor: not-allowed; opacity: .45; }
 .transaction-form .submit-button { min-height: 45px; font-size: 12px; }
 .cancel-edit { justify-self: center; font-size: 11px; }
 .success-banner { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; padding: 11px 14px; border: 1px solid #cce6d3; border-radius: 10px; background: #eff8f1; color: #276a43; font-size: 12px; }

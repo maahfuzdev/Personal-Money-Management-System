@@ -60,6 +60,53 @@ const PAGE_COPY = {
   '/reports': ['UNDERSTAND YOUR HABITS', 'Reports', 'Explore your cash flow and see where your money goes.'],
 }
 
+function calculateAmountExpression(expression) {
+  const compact = expression.replace(/\s+/g, '')
+  const tokens = compact.match(/(?:\d+(?:\.\d*)?|\.\d+|[()+\-*/])/g) || []
+  if (!compact || tokens.join('') !== compact) throw new Error('Use numbers and +, −, ×, ÷ only.')
+
+  let position = 0
+  function parseFactor() {
+    const token = tokens[position++]
+    if (token === '+') return parseFactor()
+    if (token === '-') return -parseFactor()
+    if (token === '(') {
+      const value = parseExpression()
+      if (tokens[position++] !== ')') throw new Error('Close the bracket to finish the calculation.')
+      return value
+    }
+    if (token === undefined || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) {
+      throw new Error('Complete the calculation first.')
+    }
+    return Number(token)
+  }
+
+  function parseTerm() {
+    let value = parseFactor()
+    while (tokens[position] === '*' || tokens[position] === '/') {
+      const operator = tokens[position++]
+      const next = parseFactor()
+      if (operator === '/' && next === 0) throw new Error('Cannot divide by zero.')
+      value = operator === '*' ? value * next : value / next
+    }
+    return value
+  }
+
+  function parseExpression() {
+    let value = parseTerm()
+    while (tokens[position] === '+' || tokens[position] === '-') {
+      const operator = tokens[position++]
+      const next = parseTerm()
+      value = operator === '+' ? value + next : value - next
+    }
+    return value
+  }
+
+  const result = parseExpression()
+  if (position !== tokens.length || !Number.isFinite(result)) throw new Error('Check the calculation and try again.')
+  return result
+}
+
 function Dashboard({ session, onSignOut, navigate, path }) {
   const route = PAGE_COPY[path] ? path : '/'
   const [eyebrow, pageTitle, pageDescription] = PAGE_COPY[route]
@@ -73,6 +120,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
+  const [isAmountCalculatorOpen, setIsAmountCalculatorOpen] = useState(false)
+  const [calculatorExpression, setCalculatorExpression] = useState('')
+  const [calculatorResult, setCalculatorResult] = useState(null)
+  const [calculatorError, setCalculatorError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const isConfirmingDeleteRef = useRef(false)
@@ -321,6 +372,37 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setEditingId(null)
     setForm(emptyForm())
     setFormError('')
+  }
+
+  function updateCalculatorExpression(nextExpression) {
+    setCalculatorExpression(nextExpression)
+    setCalculatorError('')
+    try {
+      setCalculatorResult(calculateAmountExpression(nextExpression))
+    } catch {
+      setCalculatorResult(null)
+    }
+  }
+
+  function handleCalculatorKey(key) {
+    if (key === 'C') return updateCalculatorExpression('')
+    if (key === '⌫') return updateCalculatorExpression(calculatorExpression.slice(0, -1))
+    const operators = { '×': '*', '÷': '/', '−': '-' }
+    updateCalculatorExpression(`${calculatorExpression}${operators[key] || key}`)
+  }
+
+  function useCalculatedAmount() {
+    if (calculatorResult === null) {
+      setCalculatorError('Complete the calculation before using the amount.')
+      return
+    }
+    if (calculatorResult <= 0) {
+      setCalculatorError('Amount must be greater than zero.')
+      return
+    }
+    setForm((current) => ({ ...current, amount: calculatorResult.toFixed(2) }))
+    setIsAmountCalculatorOpen(false)
+    setCalculatorError('')
   }
 
   async function handleSubmit(event) {
@@ -710,9 +792,27 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <button type="button" className={form.type === 'INCOME' ? 'type-option selected income' : 'type-option'} onClick={() => setForm({ ...form, type: 'INCOME' })}>Income</button>
               </div>
               {formError && <div className="form-alert" role="alert">{formError}</div>}
-              <label className="form-field"><span>Amount <small>(BDT)</small></span>
-                <input required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
-              </label>
+              <div className="form-field amount-field">
+                <div className="amount-field-heading"><label htmlFor="transaction-amount">Amount <small>(BDT)</small></label>
+                  <button className="calculator-toggle" type="button" aria-expanded={isAmountCalculatorOpen} aria-controls={isAmountCalculatorOpen ? 'amount-calculator' : undefined} onClick={() => {
+                    const nextOpen = !isAmountCalculatorOpen
+                    setIsAmountCalculatorOpen(nextOpen)
+                    setCalculatorError('')
+                    if (nextOpen) updateCalculatorExpression(form.amount)
+                  }}>{isAmountCalculatorOpen ? 'Close calculator' : 'Use calculator'}</button>
+                </div>
+                <input id="transaction-amount" required min="0.01" step="0.01" type="number" inputMode="decimal" placeholder="0.00" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
+                {isAmountCalculatorOpen && <div id="amount-calculator" className="amount-calculator">
+                  <label className="calculator-expression-label" htmlFor="calculator-expression">Calculation</label>
+                  <input id="calculator-expression" className="calculator-expression" inputMode="decimal" placeholder="e.g. 1200 + 350 × 2" value={calculatorExpression} onChange={(event) => updateCalculatorExpression(event.target.value)} />
+                  <div className="calculator-keys" aria-label="Calculator keys">
+                    {['7', '8', '9', '÷', '4', '5', '6', '×', '1', '2', '3', '−', 'C', '0', '.', '+', '(', ')', '⌫'].map((key) => <button key={key} className={['÷', '×', '−', '+'].includes(key) ? 'operator' : ''} type="button" onClick={() => handleCalculatorKey(key)} aria-label={key === '⌫' ? 'Delete last character' : key === 'C' ? 'Clear calculation' : key}>{key}</button>)}
+                  </div>
+                  {calculatorError && <span className="calculator-error" role="alert">{calculatorError}</span>}
+                  <div className="calculator-result"><span>Result</span><strong>{calculatorResult === null ? '—' : calculatorResult.toLocaleString('en-BD', { maximumFractionDigits: 2 })} ৳</strong></div>
+                  <button className="calculator-use-button" type="button" disabled={calculatorResult === null || calculatorResult <= 0} onClick={useCalculatedAmount}>Use amount</button>
+                </div>}
+              </div>
               <label className="form-field"><span>Category</span>
                 <input required list={`category-suggestions-${form.type}`} maxLength="60" placeholder={form.type === 'INCOME' ? 'e.g. Salary' : 'e.g. Groceries'} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
               </label>
