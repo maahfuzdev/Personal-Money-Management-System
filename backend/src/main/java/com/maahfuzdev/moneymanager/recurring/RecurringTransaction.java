@@ -84,6 +84,19 @@ public class RecurringTransaction {
         this.active = true;
     }
 
+    public RecurringTransaction(AppUser user, RecurringTransactionResponse backup) {
+        this.user = user;
+        this.type = backup.type();
+        this.amount = backup.amount();
+        this.category = backup.category();
+        this.note = cleanNote(backup.note());
+        this.frequency = backup.frequency();
+        this.startDate = backup.startDate();
+        this.nextRunDate = backup.nextRunDate();
+        this.endDate = backup.endDate();
+        this.active = backup.active();
+    }
+
     public void setActive(boolean active) { this.active = active; }
 
     public boolean isFinished() {

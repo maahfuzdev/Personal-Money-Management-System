@@ -7,6 +7,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
@@ -23,5 +25,10 @@ public class AccountBackupController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
                         .filename("money-manager-backup.json", StandardCharsets.UTF_8).build().toString())
                 .body(backupService.export(jwt.getSubject()));
+    }
+
+    @PostMapping(value = "/restore", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public BackupRestoreResult restore(@AuthenticationPrincipal Jwt jwt, @RequestBody AccountBackupResponse backup) {
+        return backupService.restore(jwt.getSubject(), backup);
     }
 }

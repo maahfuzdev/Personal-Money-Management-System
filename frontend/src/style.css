@@ -508,6 +508,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .import-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce4f0; border-radius: 8px; background: #f4f7fc; color: #385b94; cursor: pointer; display: inline-flex; align-items: center; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .import-button:hover { background: #eaf0fa; }
 .import-button input { display: none; }
+.restore-button { min-height: 34px; padding: 0 10px; border: 1px solid #dce4f0; border-radius: 8px; background: #fff; color: #50678b; cursor: pointer; display: inline-flex; align-items: center; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.restore-button:hover { background: #f3f6fa; }
+.restore-button input { display: none; }
 .import-preview { width: 100%; padding: 14px; border: 1px solid #e4eaf0; border-radius: 12px; background: #fbfcfe; }
 .import-preview-heading, .import-preview-heading > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .import-preview-heading > div { justify-content: flex-start; flex-wrap: wrap; }

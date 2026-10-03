@@ -11,6 +11,7 @@ import {
   deleteTransaction,
   exportTransactions,
   exportAccountBackup,
+  restoreAccountBackup,
   previewTransactionImport,
   importTransactions,
   getBudgets,
@@ -161,6 +162,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [transactionPageInfo, setTransactionPageInfo] = useState({ totalItems: 0, totalPages: 0, size: 10 })
   const [isExporting, setIsExporting] = useState(false)
   const [isExportingBackup, setIsExportingBackup] = useState(false)
+  const [restorePreview, setRestorePreview] = useState(null)
+  const [restoreError, setRestoreError] = useState('')
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false)
   const [importPreview, setImportPreview] = useState(null)
   const [importError, setImportError] = useState('')
   const [isImporting, setIsImporting] = useState(false)
@@ -415,6 +419,36 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       if (error.status === 401) onSignOut()
       else setLoadError(error.message)
     } finally { setIsExportingBackup(false) }
+  }
+
+  async function handleBackupRestoreFile(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setRestoreError(''); setRestorePreview(null)
+    try {
+      if (file.size > 20 * 1024 * 1024) throw new Error('Backup files must be 20 MB or smaller.')
+      const backup = JSON.parse(await file.text())
+      if (![1, 2].includes(backup?.formatVersion) || !Array.isArray(backup.transactions))
+        throw new Error('This does not look like a supported Money Manager backup file.')
+      const records = ['accounts', 'transfers', 'adjustments', 'transactions', 'budgets', 'goals', 'contributions', 'recurringTransactions']
+        .reduce((count, key) => count + (Array.isArray(backup[key]) ? backup[key].length : 0), 0)
+      setRestorePreview({ fileName: file.name, backup, records })
+    } catch (error) { setRestoreError(error instanceof SyntaxError ? 'The selected file is not valid JSON.' : error.message) }
+  }
+
+  async function handleBackupRestore() {
+    if (!restorePreview || isRestoringBackup) return
+    setIsRestoringBackup(true); setRestoreError('')
+    try {
+      const result = await restoreAccountBackup(session.token, restorePreview.backup)
+      setSuccessMessage(`${result.importedCount} records restored; ${result.skippedCount} existing records skipped.`)
+      setRestorePreview(null)
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setRestoreError(error.message || 'Could not restore this backup.')
+    } finally { setIsRestoringBackup(false) }
   }
 
   async function handleImportFile(event) {
@@ -933,6 +967,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <label className="import-button">{isImporting && !importPreview ? 'Reading…' : 'Import CSV'}
                   <input type="file" accept=".csv,text/csv" onChange={handleImportFile} disabled={isImporting} />
                 </label>
+                <label className="restore-button">Restore backup
+                  <input type="file" accept=".json,application/json" onChange={handleBackupRestoreFile} disabled={isRestoringBackup} />
+                </label>
                 <button className="clear-filters" type="button" onClick={clearTransactionFilters} disabled={activeFilterCount === 0}>
                   Clear filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                 </button>
@@ -948,6 +985,14 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               </div>)}</div>{importPreview.rows.length > 100 && <p>Showing first 100 of {importPreview.rows.length} rows.</p>}
                 <button className="submit-button import-confirm" type="button" disabled={isImporting || importPreview.validCount === 0} onClick={handleImportConfirm}>
                   {isImporting ? 'Importing…' : `Import ${importPreview.validCount} transaction${importPreview.validCount === 1 ? '' : 's'}`}</button></>}
+            </section>}
+            {(restorePreview || restoreError) && <section className="import-preview restore-preview" aria-live="polite">
+              <div className="import-preview-heading"><div><strong>Backup restore preview</strong>{restorePreview && <span>{restorePreview.fileName} · {restorePreview.records} records</span>}</div>
+                <button type="button" onClick={() => { setRestorePreview(null); setRestoreError('') }}>Close</button></div>
+              {restoreError && <p className="form-alert" role="alert">{restoreError}</p>}
+              {restorePreview && <><p>Restore adds records to this account and skips matches. Existing data will not be deleted.</p>
+                <button className="submit-button import-confirm" type="button" disabled={isRestoringBackup} onClick={handleBackupRestore}>
+                  {isRestoringBackup ? 'Restoring…' : `Restore ${restorePreview.records} records`}</button></>}
             </section>}
             {hasInvalidDateRange && <div className="filter-warning" role="status">Choose a start date that is on or before the end date. CSV export is unavailable until the range is corrected.</div>}
             {isLoading ? <div className="empty-state"><span className="loading-dot" />Loading your activity…</div>

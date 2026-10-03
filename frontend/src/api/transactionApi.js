@@ -116,6 +116,10 @@ export async function exportAccountBackup(token) {
   return response.blob()
 }
 
+export function restoreAccountBackup(token, backup) {
+  return request('/account-backup/restore', token, { method: 'POST', body: JSON.stringify(backup) })
+}
+
 export function previewTransactionImport(token, file) {
   const data = new FormData()
   data.append('file', file)
