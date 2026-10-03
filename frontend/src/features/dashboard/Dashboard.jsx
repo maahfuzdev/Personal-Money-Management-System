@@ -855,6 +855,14 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           </article>
         </section>}
 
+        {(route === '/' || route === '/reports') && Boolean(analytics?.spendingAlerts?.length) && <section className="spending-alerts" aria-labelledby="spending-alerts-title">
+          <div className="spending-alerts-heading"><span className="spending-alert-icon" aria-hidden="true">!</span><div><p className="eyebrow">SPENDING WATCH</p><h2 id="spending-alerts-title">A category is spending more than usual</h2></div></div>
+          <div className="spending-alert-list">{analytics.spendingAlerts.map((alert) => <article className="spending-alert-row" key={alert.category}>
+            <div><strong>{alert.category}</strong><span>{Math.round(Number(alert.increasePercent))}% above its average over the previous 3 months</span></div>
+            <div><strong>{money.format(alert.currentAmount)}</strong><span>3-month average {money.format(alert.threeMonthAverage)}</span></div>
+          </article>)}</div>
+        </section>}
+
         {successMessage && <div className="success-banner" role="status" aria-live="polite">
           <span aria-hidden="true">✓</span><span>{successMessage}</span>
           <button type="button" onClick={() => setSuccessMessage('')} aria-label="Dismiss success message">Dismiss</button>

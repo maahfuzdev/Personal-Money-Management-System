@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -73,9 +74,29 @@ public class DashboardAnalyticsService {
                 .sorted(Comparator.comparing(CategorySpending::amount).reversed())
                 .toList();
 
+        Map<String, BigDecimal> priorThreeMonthTotals = new HashMap<>();
+        for (Object[] row : transactionRepository.summarizeExpensesByCategory(userId, TransactionType.EXPENSE,
+                selectedMonth.minusMonths(3).atDay(1), selectedStart)) {
+            priorThreeMonthTotals.put(((String) row[0]).toLowerCase(Locale.ROOT), (BigDecimal) row[1]);
+        }
+        List<SpendingAlert> alerts = categories.stream().map(category -> {
+                    BigDecimal previousAverage = priorThreeMonthTotals
+                            .getOrDefault(category.category().toLowerCase(Locale.ROOT), BigDecimal.ZERO)
+                            .divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
+                    if (previousAverage.signum() == 0 || category.amount().compareTo(previousAverage) <= 0) return null;
+                    BigDecimal increasePercent = category.amount().subtract(previousAverage)
+                            .multiply(BigDecimal.valueOf(100)).divide(previousAverage, 1, RoundingMode.HALF_UP);
+                    return increasePercent.compareTo(BigDecimal.valueOf(30)) >= 0
+                            ? new SpendingAlert(category.category(), category.amount(), previousAverage, increasePercent)
+                            : null;
+                })
+                .filter(alert -> alert != null)
+                .sorted(Comparator.comparing(SpendingAlert::increasePercent).reversed())
+                .toList();
+
         return new DashboardAnalyticsResponse(selectedMonth.toString(), selected.income, selected.expense,
                 selected.income.subtract(selected.expense), previousExpense, expenseChangePercent,
-                List.copyOf(trend), categories);
+                List.copyOf(trend), categories, alerts);
     }
 
     private static class MonthValues {

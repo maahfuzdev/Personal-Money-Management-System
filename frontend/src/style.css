@@ -465,6 +465,17 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .chart-bar-net.negative { background: #d96f78; }
 .chart-loading { min-height: 185px; }
 .chart-empty { min-height: 185px; font-size: 11px; }
+.spending-alerts { display: grid; gap: 12px; margin: 0 0 20px; padding: 17px 20px; border: 1px solid #f1dfc7; border-radius: 13px; background: #fffaf2; }
+.spending-alerts-heading { display: flex; align-items: center; gap: 11px; }
+.spending-alert-icon { display: grid; width: 30px; height: 30px; flex: 0 0 auto; place-items: center; border-radius: 9px; background: #fff0d9; color: #a56420; font: 800 15px 'Manrope', sans-serif; }
+.spending-alerts-heading .eyebrow { margin: 0 0 3px; color: #a56420; font-size: 8px; letter-spacing: .1em; }
+.spending-alerts-heading h2 { margin: 0; color: #55432e; font: 700 13px 'Manrope', sans-serif; }
+.spending-alert-list { display: grid; }
+.spending-alert-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #f1e8da; }
+.spending-alert-row > div { display: grid; gap: 3px; }
+.spending-alert-row > div:last-child { text-align: right; }
+.spending-alert-row strong { color: #574530; font-size: 10px; }
+.spending-alert-row span { color: #8a7c69; font-size: 9px; }
 .category-chart { display: grid; grid-template-columns: minmax(120px, .85fr) minmax(0, 1fr); align-items: center; gap: 17px; padding: 22px; }
 .category-donut { display: grid; width: min(100%, 178px); aspect-ratio: 1; place-items: center; border-radius: 50%; }
 .category-donut-center { display: grid; width: 68%; aspect-ratio: 1; align-content: center; justify-items: center; gap: 5px; overflow: hidden; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgb(35 55 91 / 8%); text-align: center; }
