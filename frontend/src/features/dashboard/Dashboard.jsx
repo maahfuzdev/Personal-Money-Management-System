@@ -165,6 +165,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [importError, setImportError] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [budgets, setBudgets] = useState([])
+  const [currentBudgets, setCurrentBudgets] = useState([])
   const [budgetForm, setBudgetForm] = useState(emptyBudget)
   const [budgetMonth, setBudgetMonth] = useState(currentMonth())
   const [editingBudgetId, setEditingBudgetId] = useState(null)
@@ -186,15 +187,21 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     && (!item.endDate || item.nextRunDate <= item.endDate)).sort((first, second) => first.nextRunDate.localeCompare(second.nextRunDate))
   const activeFilterCount = [filter !== 'ALL', Boolean(accountFilter), Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
   const hasInvalidDateRange = Boolean(startDate && endDate && startDate > endDate)
-  const budgetWarnings = budgetMonth === currentMonth()
+  const selectedBudgetWarnings = budgetMonth === currentMonth()
     ? budgets.map((budget) => ({ ...budget, usedPercent: Number(budget.monthlyLimit) > 0 ? Number(budget.spent) / Number(budget.monthlyLimit) * 100 : 0 }))
       .filter((budget) => budget.usedPercent >= 80).sort((a, b) => b.usedPercent - a.usedPercent)
     : []
+  const budgetWarnings = currentBudgets.map((budget) => ({ ...budget,
+    usedPercent: Number(budget.monthlyLimit) > 0 ? Number(budget.spent) / Number(budget.monthlyLimit) * 100 : 0,
+  })).filter((budget) => budget.usedPercent >= 80).sort((a, b) => b.usedPercent - a.usedPercent)
 
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring, accountResult, transferResult, adjustmentResult] = await Promise.all([
+      const activeBudgetsRequest = getBudgets(session.token, currentMonth())
+      const selectedBudgetsRequest = selectedMonth === currentMonth()
+        ? activeBudgetsRequest : getBudgets(session.token, selectedMonth)
+      const [transactionResult, totals, monthlyBudgets, activeMonthBudgets, savingsGoals, monthlyAnalytics, recurring, accountResult, transferResult, adjustmentResult] = await Promise.all([
         getTransactions(session.token, {
           page: transactionPage,
           size: 10,
@@ -205,7 +212,8 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           endDate,
         }),
         getTransactionSummary(session.token),
-        getBudgets(session.token, selectedMonth),
+        selectedBudgetsRequest,
+        activeBudgetsRequest,
         getGoals(session.token),
         getDashboardAnalytics(session.token, selectedMonth),
         getRecurringTransactions(session.token),
@@ -219,6 +227,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       if (transactionPage !== lastAvailablePage) setTransactionPage(lastAvailablePage)
       setSummary(totals)
       setBudgets(monthlyBudgets)
+      setCurrentBudgets(activeMonthBudgets)
       setGoals(savingsGoals)
       setAnalytics(monthlyAnalytics)
       setRecurringTransactions(recurring)
@@ -753,6 +762,22 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           <SummaryCard label="Expenses" value={summary.totalExpense} kind="expense" icon="↑" />
         </section>}
 
+        {route === '/' && !isLoading && budgetWarnings.length > 0 && <section className="budget-nudge-panel" aria-labelledby="budget-nudge-heading" role="status" aria-live="polite">
+          <div className="budget-nudge-heading"><span className="budget-nudge-icon" aria-hidden="true">!</span><div><p className="eyebrow">MONTHLY BUDGET CHECK</p><h2 id="budget-nudge-heading">{budgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'Some budgets are over limit' : 'You’re getting close to a budget limit'}</h2></div>
+            <button type="button" className="subtle-link" onClick={() => navigate('/budgets')}>View budgets <span aria-hidden="true">→</span></button>
+          </div>
+          <div className="budget-nudge-list">{budgetWarnings.slice(0, 4).map((budget) => {
+            const limit = Number(budget.monthlyLimit)
+            const spent = Number(budget.spent)
+            const remaining = limit - spent
+            const isOver = remaining < 0
+            return <button className={`budget-nudge${isOver ? ' over-limit' : ''}`} type="button" key={budget.id} onClick={() => navigate('/budgets')}>
+              <span className="budget-nudge-copy"><strong>{budget.category}</strong><span>{Math.round(budget.usedPercent)}% used · {isOver ? `${money.format(Math.abs(remaining))} over` : `${money.format(remaining)} left`}</span></span>
+              <span className="budget-nudge-track"><i style={{ width: `${Math.min(100, budget.usedPercent)}%` }} /></span>
+            </button>
+          })}</div>
+        </section>}
+
         {(route === '/' || route === '/reports') && <section className="insights-grid" aria-label="Monthly spending insights">
           <article className="panel insight-panel trend-panel">
             <div className="panel-heading insight-heading"><div><p className="eyebrow">THE BIG PICTURE</p><h2>Cash flow</h2></div>
@@ -1006,9 +1031,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               <input type="month" value={budgetMonth} disabled={Boolean(editingBudgetId)} onChange={(event) => changeBudgetMonth(event.target.value)} />
             </label>
           </div>
-          {!isLoading && budgetWarnings.length > 0 && <div className={`budget-alerts ${budgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'over-limit' : ''}`} role="status" aria-live="polite">
-            <strong>{budgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'Budget limit reached' : 'Budget heads-up'}</strong>
-            <span>{budgetWarnings.map((budget) => `${budget.category}: ${Math.round(budget.usedPercent)}% used`).join(' · ')}</span>
+          {!isLoading && selectedBudgetWarnings.length > 0 && <div className={`budget-alerts ${selectedBudgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'over-limit' : ''}`} role="status" aria-live="polite">
+            <strong>{selectedBudgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'Budget limit reached' : 'Budget heads-up'}</strong>
+            <span>{selectedBudgetWarnings.map((budget) => `${budget.category}: ${Math.round(budget.usedPercent)}% used`).join(' · ')}</span>
           </div>}
           <div className="budget-layout">
             <div className="budget-list">

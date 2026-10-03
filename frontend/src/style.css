@@ -351,6 +351,24 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .budget-alerts { display: grid; gap: 4px; margin: 0 23px; padding: 12px 14px; border: 1px solid #f2dfb9; border-radius: 10px; background: #fffaf0; color: #805d1d; font-size: 11px; }
 .budget-alerts.over-limit { border-color: #f1cbc7; background: #fff6f5; color: #963e37; }
 .budget-alerts strong { font-size: 12px; }
+.budget-nudge-panel { display: grid; gap: 14px; margin: 0 0 20px; padding: 18px 20px; border: 1px solid #f0dfbb; border-radius: 15px; background: linear-gradient(120deg, #fffdf7, #fff9ed); box-shadow: 0 7px 25px rgb(115 86 27 / 4%); }
+.budget-nudge-heading { display: flex; align-items: center; gap: 11px; }
+.budget-nudge-icon { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: #fff0cc; color: #946619; font: 800 17px 'Manrope', sans-serif; }
+.budget-nudge-heading > div { min-width: 0; flex: 1; }
+.budget-nudge-heading .eyebrow { margin: 0 0 3px; color: #9a7839; font-size: 8px; letter-spacing: .1em; }
+.budget-nudge-heading h2 { margin: 0; color: #614b23; font: 700 14px 'Manrope', sans-serif; }
+.budget-nudge-heading .subtle-link { flex: 0 0 auto; border: 0; background: transparent; cursor: pointer; }
+.budget-nudge-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+.budget-nudge { display: grid; gap: 10px; padding: 12px; border: 1px solid #f1e4c8; border-radius: 10px; background: rgb(255 255 255 / 78%); color: #67532b; cursor: pointer; text-align: left; }
+.budget-nudge:hover { border-color: #dbbd7c; background: white; }
+.budget-nudge.over-limit { border-color: #f1cbc7; background: #fffafa; color: #963e37; }
+.budget-nudge-copy { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.budget-nudge-copy strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.budget-nudge-copy > span { flex: 0 0 auto; font-size: 9px; }
+.budget-nudge-track { height: 5px; overflow: hidden; border-radius: 99px; background: #f3ecd9; }
+.budget-nudge-track i { display: block; height: 100%; border-radius: inherit; background: #d7a13d; }
+.budget-nudge.over-limit .budget-nudge-track { background: #f7e0dd; }
+.budget-nudge.over-limit .budget-nudge-track i { background: #d16b55; }
 .budget-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .56fr); gap: 24px; padding: 21px 23px 24px; }
 .budget-list { display: grid; align-content: start; }
 .empty-state.compact { min-height: 190px; }
