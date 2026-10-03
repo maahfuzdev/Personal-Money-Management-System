@@ -165,7 +165,7 @@ function AuthScreen({ onAuthenticated }) {
       </form>
 
       <p className="auth-privacy">
-        Session tokens stay in this browser tab's memory and are never added to the page URL. Sign in again after a reload.
+        Stay signed in on this device for up to 30 days. Sign out to end your session here.
       </p>
     </div>
   )

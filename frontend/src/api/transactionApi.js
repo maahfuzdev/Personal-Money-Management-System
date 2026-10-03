@@ -34,12 +34,14 @@ async function authorizedFetch(path, token, options = {}, allowRefresh = true) {
           .then((tokens) => {
             if (generation !== sessionGeneration) throw new Error('The account session changed. Please retry your request.')
             currentRefreshToken = tokens.refreshToken
+            window.localStorage.setItem('moneywise.refreshToken', tokens.refreshToken)
             window.dispatchEvent(new CustomEvent('auth:session-refreshed', { detail: tokens }))
             return tokens
           })
           .catch((error) => {
             if (error.status === 401 && generation === sessionGeneration) {
               currentRefreshToken = null
+              window.localStorage.removeItem('moneywise.refreshToken')
               window.dispatchEvent(new CustomEvent('auth:session-expired'))
             }
             throw error

@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { logoutSession } from './api/authApi.js'
+import { logoutSession, refreshSession } from './api/authApi.js'
 import { setRefreshToken } from './api/transactionApi.js'
 import AuthScreen from './features/auth/AuthScreen.jsx'
 import Dashboard from './features/dashboard/Dashboard.jsx'
 
+let sessionRestoreInFlight = null
+
+function restoreSession(refreshToken) {
+  if (!sessionRestoreInFlight) {
+    sessionRestoreInFlight = refreshSession(refreshToken).finally(() => {
+      sessionRestoreInFlight = null
+    })
+  }
+  return sessionRestoreInFlight
+}
+
 function App() {
   const [session, setSession] = useState(null)
+  const [isRestoringSession, setIsRestoringSession] = useState(true)
   const sessionRef = useRef(null)
   const [path, setPath] = useState(window.location.pathname)
 
@@ -29,7 +41,9 @@ function App() {
       setSession(nextSession)
     }
     const onSessionExpired = () => {
+      window.localStorage.removeItem('moneywise.refreshToken')
       sessionRef.current = null
+      setRefreshToken(null)
       setSession(null)
       navigate('/login')
     }
@@ -43,7 +57,42 @@ function App() {
     }
   }, [navigate])
 
+  useEffect(() => {
+    let cancelled = false
+    const savedRefreshToken = window.localStorage.getItem('moneywise.refreshToken')
+
+    if (!savedRefreshToken) {
+      setIsRestoringSession(false)
+      return () => { cancelled = true }
+    }
+
+    setRefreshToken(savedRefreshToken)
+    restoreSession(savedRefreshToken)
+      .then((tokens) => {
+        if (cancelled) return
+        window.localStorage.setItem('moneywise.refreshToken', tokens.refreshToken)
+        const restoredSession = {
+          token: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          user: tokens.user,
+        }
+        sessionRef.current = restoredSession
+        setRefreshToken(tokens.refreshToken)
+        setSession(restoredSession)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          window.localStorage.removeItem('moneywise.refreshToken')
+          setRefreshToken(null)
+        }
+      })
+      .finally(() => { if (!cancelled) setIsRestoringSession(false) })
+
+    return () => { cancelled = true }
+  }, [])
+
   const handleAuthenticated = useCallback((nextSession) => {
+    window.localStorage.setItem('moneywise.refreshToken', nextSession.refreshToken)
     sessionRef.current = nextSession
     setRefreshToken(nextSession.refreshToken)
     setSession(nextSession)
@@ -53,11 +102,14 @@ function App() {
   const handleSignOut = useCallback(() => {
     const currentSession = sessionRef.current
     if (currentSession?.refreshToken) void logoutSession(currentSession.refreshToken)
+    window.localStorage.removeItem('moneywise.refreshToken')
     sessionRef.current = null
     setRefreshToken(null)
     setSession(null)
     navigate('/login')
   }, [navigate])
+
+  if (isRestoringSession) return <main className="app-shell" aria-live="polite">Restoring your session…</main>
 
   if (session) return <Dashboard session={session} onSignOut={handleSignOut} navigate={navigate} path={path} />
 
