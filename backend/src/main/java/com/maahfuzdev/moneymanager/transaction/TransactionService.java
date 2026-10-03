@@ -5,6 +5,7 @@ import com.maahfuzdev.moneymanager.user.AppUserRepository;
 import com.maahfuzdev.moneymanager.account.AccountType;
 import com.maahfuzdev.moneymanager.account.MoneyAccount;
 import com.maahfuzdev.moneymanager.account.MoneyAccountRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,6 +33,7 @@ public class TransactionService {
     private final AppUserRepository userRepository;
     private final MoneyAccountRepository accountRepository;
 
+    @Autowired
     public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository,
                               MoneyAccountRepository accountRepository) {
         this.transactionRepository = transactionRepository;
