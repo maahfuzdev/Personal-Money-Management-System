@@ -721,6 +721,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   body.printing-statement { background: #fff; }
   body.printing-statement .app-frame > .app-sidebar,
   body.printing-statement .app-main > .app-topbar,
+  body.printing-statement .dashboard-footer,
+  body.printing-statement .mobile-nav,
   body.printing-statement .page-content > :not(.monthly-statement) { display: none !important; }
   body.printing-statement .app-frame,
   body.printing-statement .app-main,
