@@ -30,6 +30,18 @@ public class MoneyAccountController {
         return accountService.create(jwt.getSubject(), request);
     }
 
+    @GetMapping("/adjustments")
+    public List<MoneyAccountAdjustmentResponse> adjustments(@AuthenticationPrincipal Jwt jwt) {
+        return accountService.adjustmentHistory(jwt.getSubject());
+    }
+
+    @PostMapping("/{accountId}/adjustments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public MoneyAccountAdjustmentResponse adjust(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long accountId, @Valid @RequestBody MoneyAccountAdjustmentRequest request) {
+        return accountService.adjust(jwt.getSubject(), accountId, request);
+    }
+
     @GetMapping("/transfers")
     public List<MoneyTransferResponse> transfers(@AuthenticationPrincipal Jwt jwt) {
         return transferService.list(jwt.getSubject());

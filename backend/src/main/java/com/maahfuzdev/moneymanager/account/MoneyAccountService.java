@@ -19,15 +19,18 @@ public class MoneyAccountService {
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
     private final MoneyAccountRepository accountRepository;
     private final MoneyTransferRepository transferRepository;
+    private final MoneyAccountAdjustmentRepository adjustmentRepository;
     private final TransactionRepository transactionRepository;
     private final AppUserRepository userRepository;
 
     public MoneyAccountService(MoneyAccountRepository accountRepository,
                                MoneyTransferRepository transferRepository,
+                               MoneyAccountAdjustmentRepository adjustmentRepository,
                                TransactionRepository transactionRepository,
                                AppUserRepository userRepository) {
         this.accountRepository = accountRepository;
         this.transferRepository = transferRepository;
+        this.adjustmentRepository = adjustmentRepository;
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
     }
@@ -52,6 +55,27 @@ public class MoneyAccountService {
         return toResponse(owner.getId(), saved);
     }
 
+    public List<MoneyAccountAdjustmentResponse> adjustmentHistory(String email) {
+        Long userId = user(email).getId();
+        return adjustmentRepository.findAllByUserIdOrderByAdjustmentDateDescCreatedAtDesc(userId).stream()
+                .map(MoneyAccountAdjustmentResponse::from).toList();
+    }
+
+    @Transactional
+    public MoneyAccountAdjustmentResponse adjust(String email, Long accountId,
+            MoneyAccountAdjustmentRequest request) {
+        AppUser owner = user(email);
+        MoneyAccount account = ownedAccount(owner.getId(), accountId);
+        BigDecimal previous = currentBalance(owner.getId(), account);
+        BigDecimal actual = request.actualBalance().setScale(2);
+        if (previous.compareTo(actual) == 0)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The actual balance already matches this account.");
+        String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
+        MoneyAccountAdjustment saved = adjustmentRepository.save(new MoneyAccountAdjustment(owner, account,
+                previous, actual, request.adjustmentDate(), note));
+        return MoneyAccountAdjustmentResponse.from(saved);
+    }
+
     MoneyAccount ownedAccount(Long userId, Long accountId) {
         return accountRepository.findByIdAndUserId(accountId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found."));
@@ -63,11 +87,16 @@ public class MoneyAccountService {
     }
 
     private MoneyAccountResponse toResponse(Long userId, MoneyAccount account) {
-        BigDecimal balance = account.getOpeningBalance()
-                .add(transactionRepository.netAmountByAccount(account.getId(), userId, TransactionType.INCOME))
-                .add(transferRepository.netTransfers(userId, account.getId()));
+        BigDecimal balance = currentBalance(userId, account);
         return new MoneyAccountResponse(account.getId(), account.getName(), account.getType(),
                 account.getOpeningBalance(), balance);
+    }
+
+    private BigDecimal currentBalance(Long userId, MoneyAccount account) {
+        return account.getOpeningBalance()
+                .add(transactionRepository.netAmountByAccount(account.getId(), userId, TransactionType.INCOME))
+                .add(transferRepository.netTransfers(userId, account.getId()))
+                .add(adjustmentRepository.netAdjustments(userId, account.getId()));
     }
 
     private void ensureCashAccount(AppUser owner) {

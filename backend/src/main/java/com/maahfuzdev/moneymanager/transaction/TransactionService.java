@@ -5,6 +5,7 @@ import com.maahfuzdev.moneymanager.user.AppUserRepository;
 import com.maahfuzdev.moneymanager.account.AccountType;
 import com.maahfuzdev.moneymanager.account.MoneyAccount;
 import com.maahfuzdev.moneymanager.account.MoneyAccountRepository;
+import com.maahfuzdev.moneymanager.account.MoneyAccountAdjustmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,17 +33,20 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final AppUserRepository userRepository;
     private final MoneyAccountRepository accountRepository;
+    private final MoneyAccountAdjustmentRepository adjustmentRepository;
 
     @Autowired
     public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository,
-                              MoneyAccountRepository accountRepository) {
+                              MoneyAccountRepository accountRepository,
+                              MoneyAccountAdjustmentRepository adjustmentRepository) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.accountRepository = accountRepository;
+        this.adjustmentRepository = adjustmentRepository;
     }
 
     public TransactionService(TransactionRepository transactionRepository, AppUserRepository userRepository) {
-        this(transactionRepository, userRepository, null);
+        this(transactionRepository, userRepository, null, null);
     }
 
     public TransactionPageResponse list(String email, TransactionType type, String search,
@@ -216,7 +220,8 @@ public class TransactionService {
         BigDecimal income = transactionRepository.sumAmountByUserAndType(userId, TransactionType.INCOME);
         BigDecimal expense = transactionRepository.sumAmountByUserAndType(userId, TransactionType.EXPENSE);
         BigDecimal openingBalances = accountRepository.sumOpeningBalancesByUserId(userId);
-        return new TransactionSummary(income, expense, income.subtract(expense).add(openingBalances));
+        BigDecimal adjustments = adjustmentRepository.sumAdjustmentsByUserId(userId);
+        return new TransactionSummary(income, expense, income.subtract(expense).add(openingBalances).add(adjustments));
     }
 
     private MoneyTransaction ownedTransaction(String email, Long id) {

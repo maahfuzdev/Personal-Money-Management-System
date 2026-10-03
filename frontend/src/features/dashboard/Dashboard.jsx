@@ -25,6 +25,8 @@ import {
   createMoneyAccount,
   getMoneyTransfers,
   createMoneyTransfer,
+  getAccountAdjustments,
+  createAccountAdjustment,
   updateTransaction,
   updateBudget,
   updateGoal,
@@ -36,6 +38,10 @@ const currentMonth = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 const todayInDhaka = () => new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().slice(0, 10)
+const dayAfter = (date, days) => {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)
+}
 const emptyForm = () => ({
   accountId: '', type: 'EXPENSE', amount: '', category: '', note: '', transactionDate: new Date().toISOString().slice(0, 10),
 })
@@ -119,12 +125,16 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [transactions, setTransactions] = useState([])
   const [accounts, setAccounts] = useState([])
   const [transfers, setTransfers] = useState([])
+  const [adjustments, setAdjustments] = useState([])
   const [accountDraft, setAccountDraft] = useState({ name: '', type: 'MOBILE_WALLET', openingBalance: '' })
   const [transferDraft, setTransferDraft] = useState({ fromAccountId: '', toAccountId: '', amount: '', transferDate: todayInDhaka(), note: '' })
   const [accountError, setAccountError] = useState('')
   const [transferError, setTransferError] = useState('')
   const [isSavingAccount, setIsSavingAccount] = useState(false)
   const [isSavingTransfer, setIsSavingTransfer] = useState(false)
+  const [adjustmentDraft, setAdjustmentDraft] = useState({ accountId: '', actualBalance: '', adjustmentDate: todayInDhaka(), note: '' })
+  const [adjustmentError, setAdjustmentError] = useState('')
+  const [isSavingAdjustment, setIsSavingAdjustment] = useState(false)
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, balance: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -171,6 +181,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
+  const reminderCutoff = dayAfter(todayInDhaka(), 7)
+  const reminderItems = recurringTransactions.filter((item) => item.active && item.nextRunDate <= reminderCutoff
+    && (!item.endDate || item.nextRunDate <= item.endDate)).sort((first, second) => first.nextRunDate.localeCompare(second.nextRunDate))
   const activeFilterCount = [filter !== 'ALL', Boolean(accountFilter), Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
   const hasInvalidDateRange = Boolean(startDate && endDate && startDate > endDate)
   const budgetWarnings = budgetMonth === currentMonth()
@@ -181,7 +194,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const loadDashboard = useCallback(async (selectedMonth = budgetMonth) => {
     setLoadError('')
     try {
-      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring, accountResult, transferResult] = await Promise.all([
+      const [transactionResult, totals, monthlyBudgets, savingsGoals, monthlyAnalytics, recurring, accountResult, transferResult, adjustmentResult] = await Promise.all([
         getTransactions(session.token, {
           page: transactionPage,
           size: 10,
@@ -198,6 +211,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         getRecurringTransactions(session.token),
         getMoneyAccounts(session.token),
         getMoneyTransfers(session.token),
+        getAccountAdjustments(session.token),
       ])
       setTransactions(transactionResult.items)
       setTransactionPageInfo(transactionResult)
@@ -210,7 +224,10 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       setRecurringTransactions(recurring)
       setAccounts(accountResult)
       setTransfers(transferResult)
+      setAdjustments(adjustmentResult)
       setForm((current) => current.accountId || !accountResult.length
+        ? current : { ...current, accountId: String(accountResult[0].id) })
+      setAdjustmentDraft((current) => current.accountId || !accountResult.length
         ? current : { ...current, accountId: String(accountResult[0].id) })
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -511,6 +528,27 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     }
   }
 
+  async function handleCreateAdjustment(event) {
+    event.preventDefault()
+    setAdjustmentError('')
+    setIsSavingAdjustment(true)
+    try {
+      const created = await createAccountAdjustment(session.token, Number(adjustmentDraft.accountId), {
+        actualBalance: Number(adjustmentDraft.actualBalance),
+        adjustmentDate: adjustmentDraft.adjustmentDate,
+        note: adjustmentDraft.note.trim() || null,
+      })
+      setAdjustmentDraft((current) => ({ ...current, actualBalance: '', note: '', adjustmentDate: todayInDhaka() }))
+      setSuccessMessage(`${created.accountName} balance adjusted and recorded.`)
+      await loadDashboard()
+    } catch (error) {
+      if (error.status === 401) onSignOut()
+      else setAdjustmentError(error.message)
+    } finally {
+      setIsSavingAdjustment(false)
+    }
+  }
+
   function startBudgetEdit(budget) {
     setEditingBudgetId(budget.id)
     setBudgetForm({ category: budget.category, monthlyLimit: String(budget.monthlyLimit), month: budget.month })
@@ -769,14 +807,16 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           <div className="panel-heading"><div><p className="eyebrow">COMING UP</p><h2 id="upcoming-heading">Scheduled transactions</h2></div>
             <button className="subtle-link" type="button" onClick={() => navigate('/recurring')}>Manage schedules <span aria-hidden="true">→</span></button>
           </div>
-          {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading schedules…</div>
-            : recurringTransactions.filter((item) => item.active).length === 0
-              ? <div className="empty-state compact"><strong>No active schedules</strong><span>Set up regular income or expenses to keep your records current.</span><button className="subtle-link" type="button" onClick={() => navigate('/recurring')}>Create a schedule →</button></div>
-              : <div className="upcoming-list">{recurringTransactions.filter((item) => item.active).slice(0, 4).map((item) => {
-                const dateText = item.nextRunDate === todayInDhaka() ? 'Due today' : dateLabel.format(new Date(`${item.nextRunDate}T12:00:00`))
+          {isLoading ? <div className="empty-state compact"><span className="loading-dot" />Loading reminders…</div>
+            : reminderItems.length === 0
+              ? <div className="empty-state compact"><strong>Nothing due in the next 7 days</strong><span>Scheduled bills and income will appear here before their date.</span><button className="subtle-link" type="button" onClick={() => navigate('/recurring')}>Manage schedules →</button></div>
+              : <div className="upcoming-list">{reminderItems.slice(0, 5).map((item) => {
+                const days = Math.round((Date.parse(`${item.nextRunDate}T00:00:00Z`) - Date.parse(`${todayInDhaka()}T00:00:00Z`)) / 86400000)
+                const dateText = days <= 0 ? 'Due today' : days === 1 ? 'Tomorrow' : `In ${days} days`
                 return <article className="upcoming-item" key={item.id}>
                   <span className={`upcoming-type ${item.type === 'INCOME' ? 'income' : 'expense'}`} aria-hidden="true">{item.type === 'INCOME' ? '↙' : '↗'}</span>
-                  <div className="upcoming-copy"><strong>{item.category}</strong><span>{item.frequency.toLowerCase()} · {dateText}</span></div>
+                  <div className="upcoming-copy"><strong>{item.category}</strong><span>{item.frequency.toLowerCase()} · {dateLabel.format(new Date(`${item.nextRunDate}T12:00:00`))}</span></div>
+                  <span className={`reminder-pill${days <= 1 ? ' due' : ''}`}>{dateText}</span>
                   <strong className={item.type === 'INCOME' ? 'income-text' : 'expense-text'}>{money.format(item.amount)}</strong>
                 </article>
               })}</div>}
@@ -933,6 +973,27 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <button className="submit-button" type="submit" disabled={isSavingTransfer || accounts.length < 2}>{isSavingTransfer ? 'Saving…' : 'Record transfer'}<span aria-hidden="true">→</span></button>
               </div>
             </form>
+          </div>
+          <div className="accounts-adjustment-layout">
+            <form className="panel adjustment-form" onSubmit={handleCreateAdjustment}>
+              <div className="panel-heading"><div><p className="eyebrow">BALANCE CHECK</p><h2>Correct an account balance</h2></div></div>
+              <div className="account-form-fields">
+                {adjustmentError && <div className="form-alert" role="alert">{adjustmentError}</div>}
+                <p className="adjustment-help">Count the cash or check your wallet/bank app, then enter its actual balance. We’ll record the difference without changing your transaction history.</p>
+                <label className="form-field"><span>Account</span><select required value={adjustmentDraft.accountId} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, accountId: event.target.value })}>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {money.format(account.balance || 0)}</option>)}</select></label>
+                <label className="form-field"><span>Actual balance (BDT)</span><input required type="number" min="0" step="0.01" inputMode="decimal" value={adjustmentDraft.actualBalance} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, actualBalance: event.target.value })} placeholder="What you counted" /></label>
+                <label className="form-field"><span>Date</span><input required type="date" value={adjustmentDraft.adjustmentDate} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, adjustmentDate: event.target.value })} /></label>
+                <label className="form-field"><span>Reason <small>(optional)</small></span><input maxLength="300" value={adjustmentDraft.note} onChange={(event) => setAdjustmentDraft({ ...adjustmentDraft, note: event.target.value })} placeholder="e.g. Cash count correction" /></label>
+                <button className="submit-button" type="submit" disabled={isSavingAdjustment || !accounts.length}>{isSavingAdjustment ? 'Saving…' : 'Save balance adjustment'}<span aria-hidden="true">→</span></button>
+              </div>
+            </form>
+            <section className="panel adjustment-history"><div className="panel-heading"><div><p className="eyebrow">AUDIT TRAIL</p><h2>Balance adjustments</h2></div></div>
+              {adjustments.length === 0 ? <div className="empty-state compact"><strong>No balance corrections yet</strong><span>Any correction you make will be listed here with its reason.</span></div> : <div className="adjustment-list">{adjustments.slice(0, 20).map((adjustment) => <article className="adjustment-row" key={adjustment.id}>
+                <span className={`adjustment-delta${Number(adjustment.adjustmentAmount) >= 0 ? ' positive' : ' negative'}`}>{Number(adjustment.adjustmentAmount) >= 0 ? '+' : '−'}</span>
+                <div><strong>{adjustment.accountName} · {money.format(adjustment.previousBalance)} → {money.format(adjustment.actualBalance)}</strong><small>{adjustment.adjustmentDate}{adjustment.note ? ` · ${adjustment.note}` : ''}</small></div>
+                <b>{Number(adjustment.adjustmentAmount) >= 0 ? '+' : '−'}{money.format(Math.abs(Number(adjustment.adjustmentAmount)))}</b>
+              </article>)}</div>}
+            </section>
           </div>
           <section className="panel transfer-history"><div className="panel-heading"><div><p className="eyebrow">ACCOUNT ACTIVITY</p><h2>Recent transfers</h2></div></div>
             {transfers.length === 0 ? <div className="empty-state compact"><strong>No transfers yet</strong><span>Transfers between your own accounts won’t count as income or expense.</span></div> : <div className="transfer-list">{transfers.map((transfer) => <article className="transfer-row" key={transfer.id}><span className="transfer-arrow">↗</span><div><strong>{transfer.fromAccountName} <span>to</span> {transfer.toAccountName}</strong><small>{transfer.transferDate}{transfer.note ? ` · ${transfer.note}` : ''}</small></div><b>{money.format(transfer.amount)}</b></article>)}</div>}

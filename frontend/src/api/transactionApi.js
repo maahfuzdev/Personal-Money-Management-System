@@ -138,6 +138,14 @@ export function createMoneyAccount(token, account) {
   return request('/accounts', token, { method: 'POST', body: JSON.stringify(account) })
 }
 
+export function getAccountAdjustments(token) {
+  return request('/accounts/adjustments', token)
+}
+
+export function createAccountAdjustment(token, accountId, adjustment) {
+  return request(`/accounts/${accountId}/adjustments`, token, { method: 'POST', body: JSON.stringify(adjustment) })
+}
+
 export function getMoneyTransfers(token) {
   return request('/accounts/transfers', token)
 }
