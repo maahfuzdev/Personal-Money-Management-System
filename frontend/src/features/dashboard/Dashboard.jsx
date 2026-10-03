@@ -181,6 +181,9 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [goalError, setGoalError] = useState('')
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [analytics, setAnalytics] = useState(null)
+  const [statementTransactions, setStatementTransactions] = useState([])
+  const [isLoadingStatement, setIsLoadingStatement] = useState(false)
+  const [statementError, setStatementError] = useState('')
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
   const reminderCutoff = dayAfter(todayInDhaka(), 7)
   const reminderItems = recurringTransactions.filter((item) => item.active && item.nextRunDate <= reminderCutoff
@@ -247,6 +250,39 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }, [accountFilter, budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
+
+  useEffect(() => {
+    if (route !== '/reports') return undefined
+    let isCurrent = true
+    async function loadStatementTransactions() {
+      setIsLoadingStatement(true)
+      setStatementError('')
+      try {
+        const [year, month] = budgetMonth.split('-').map(Number)
+        const startDate = `${budgetMonth}-01`
+        const endDate = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10)
+        const pageSize = 50
+        const firstPage = await getTransactions(session.token, { page: 0, size: pageSize, startDate, endDate })
+        const maximumRows = 10000
+        const pageCount = Math.min(firstPage.totalPages, Math.ceil(maximumRows / pageSize))
+        const pages = [...firstPage.items]
+        for (let batchStart = 1; batchStart < pageCount; batchStart += 8) {
+          const batchPages = Array.from({ length: Math.min(8, pageCount - batchStart) }, (_, index) => batchStart + index)
+          const batchResults = await Promise.all(batchPages.map((page) => getTransactions(session.token, {
+            page, size: pageSize, startDate, endDate,
+          })))
+          batchResults.forEach((result) => pages.push(...result.items))
+        }
+        if (isCurrent) setStatementTransactions(pages.slice(0, maximumRows))
+      } catch (error) {
+        if (isCurrent) setStatementError(error.message || 'Could not load this month’s transactions.')
+      } finally {
+        if (isCurrent) setIsLoadingStatement(false)
+      }
+    }
+    void loadStatementTransactions()
+    return () => { isCurrent = false }
+  }, [budgetMonth, route, session.token])
 
   useEffect(() => {
     let isCurrent = true
@@ -556,6 +592,13 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     } finally {
       setIsSavingAdjustment(false)
     }
+  }
+
+  function printStatement() {
+    document.body.classList.add('printing-statement')
+    const cleanup = () => document.body.classList.remove('printing-statement')
+    window.addEventListener('afterprint', cleanup, { once: true })
+    window.setTimeout(() => window.print(), 0)
   }
 
   function startBudgetEdit(budget) {
@@ -1107,7 +1150,39 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           </div>
         </section>}
 
-        {route === '/reports' && <div className="report-note"><span aria-hidden="true">i</span><p>Reports use the transactions recorded in your account. Choose a month above to compare cash flow and category spending.</p></div>}
+        {route === '/reports' && <section className="monthly-statement" aria-labelledby="statement-heading">
+          <div className="statement-header"><div><p className="eyebrow">PERSONAL FINANCE REPORT</p><h2 id="statement-heading">{formatMonth(budgetMonth)} statement</h2><p>{session.user.name} · Generated {dateLabel.format(new Date())}</p></div>
+            <div className="statement-actions"><span>Select <strong>Print / Save PDF</strong>, then choose “Save as PDF”.</span><button className="primary-action" type="button" onClick={printStatement}>Print / Save PDF</button></div>
+          </div>
+          {isLoadingStatement ? <div className="empty-state compact"><span className="loading-dot" />Loading the month’s transactions…</div>
+            : statementError ? <div className="form-alert" role="alert">{statementError}</div>
+              : <>
+                <div className="statement-totals">
+                  <div><span>Income</span><strong className="income-text">{money.format(analytics?.monthIncome || 0)}</strong></div>
+                  <div><span>Expenses</span><strong className="expense-text">{money.format(analytics?.monthExpense || 0)}</strong></div>
+                  <div><span>Net cash flow</span><strong>{money.format(analytics?.monthBalance || 0)}</strong></div>
+                </div>
+                <div className="statement-columns">
+                  <section className="statement-categories"><h3>Expenses by category</h3>
+                    {!analytics?.expenseByCategory?.length ? <p className="statement-empty">No expenses recorded for this month.</p>
+                      : <div className="statement-category-list">{analytics.expenseByCategory.map((category) => <div key={category.category}>
+                        <span><strong>{category.category}</strong><small>{category.sharePercent}%</small></span><b>{money.format(category.amount)}</b>
+                      </div>)}</div>}
+                  </section>
+                  <section className="statement-transactions"><div className="statement-table-heading"><h3>Transactions</h3><span>{statementTransactions.length}{statementTransactions.length >= 10000 ? '+' : ''} entries</span></div>
+                    {!statementTransactions.length ? <p className="statement-empty">No transactions recorded for this month.</p>
+                      : <div className="statement-table-wrap"><table><thead><tr><th>Date</th><th>Details</th><th>Type</th><th className="number-cell">Amount</th></tr></thead>
+                        <tbody>{statementTransactions.map((transaction) => <tr key={transaction.id}>
+                          <td>{dateLabel.format(new Date(`${transaction.transactionDate}T00:00:00`))}</td>
+                          <td><strong>{transaction.category}</strong><small>{transaction.note || transaction.accountName || '—'}</small></td>
+                          <td>{transaction.type === 'INCOME' ? 'Income' : 'Expense'}</td>
+                          <td className={`number-cell ${transaction.type === 'INCOME' ? 'income-text' : 'expense-text'}`}>{transaction.type === 'INCOME' ? '+' : '−'}{money.format(transaction.amount)}</td>
+                        </tr>)}</tbody></table></div>}
+                  </section>
+                </div>
+              </>}
+        </section>}
+        {route === '/reports' && <div className="report-note"><span aria-hidden="true">i</span><p>This is a personal finance summary based on the transactions you recorded. Use the month selector above to change the report period.</p></div>}
         {deleteTarget && <div className="confirm-overlay" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget && !isConfirmingDelete) setDeleteTarget(null)
         }}>
