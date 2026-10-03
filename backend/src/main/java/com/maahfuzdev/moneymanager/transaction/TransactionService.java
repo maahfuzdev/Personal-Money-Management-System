@@ -45,12 +45,17 @@ public class TransactionService {
 
     public TransactionPageResponse list(String email, TransactionType type, String search,
                                         LocalDate startDate, LocalDate endDate, int page, int size) {
+        return list(email, null, type, search, startDate, endDate, page, size);
+    }
+
+    public TransactionPageResponse list(String email, Long accountId, TransactionType type, String search,
+                                        LocalDate startDate, LocalDate endDate, int page, int size) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new InvalidTransactionDateRangeException();
         }
         AppUser user = user(email);
         String query = search == null || search.isBlank() ? null : search.trim();
-        Page<MoneyTransaction> results = transactionRepository.searchByUser(user.getId(), type, query, startDate, endDate,
+        Page<MoneyTransaction> results = searchTransactions(user.getId(), accountId, type, query, startDate, endDate,
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
         return new TransactionPageResponse(results.map(TransactionResponse::from).getContent(), results.getNumber(),
                 results.getSize(), results.getTotalElements(), results.getTotalPages());
@@ -62,12 +67,17 @@ public class TransactionService {
 
     public byte[] exportCsv(String email, TransactionType type, String search,
                             LocalDate startDate, LocalDate endDate) {
+        return exportCsv(email, null, type, search, startDate, endDate);
+    }
+
+    public byte[] exportCsv(String email, Long accountId, TransactionType type, String search,
+                            LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new InvalidTransactionDateRangeException();
         }
         Long userId = user(email).getId();
         String query = search == null || search.isBlank() ? null : search.trim();
-        Page<MoneyTransaction> firstPage = transactionRepository.searchByUser(userId, type, query,
+        Page<MoneyTransaction> firstPage = searchTransactions(userId, accountId, type, query,
                 startDate, endDate, PageRequest.of(0, EXPORT_PAGE_SIZE,
                         Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))));
         if (firstPage.getTotalElements() > MAX_EXPORT_ROWS) throw new TransactionExportTooLargeException();
@@ -75,7 +85,7 @@ public class TransactionService {
         StringBuilder csv = new StringBuilder("\uFEFFDate,Type,Category,Note,Amount (BDT),Account\r\n");
         appendCsvRows(csv, firstPage.getContent());
         for (int pageNumber = 1; pageNumber < firstPage.getTotalPages(); pageNumber++) {
-            List<MoneyTransaction> nextPage = transactionRepository.searchByUser(userId, type, query,
+            List<MoneyTransaction> nextPage = searchTransactions(userId, accountId, type, query,
                     startDate, endDate, PageRequest.of(pageNumber, EXPORT_PAGE_SIZE,
                             Sort.by(Sort.Order.desc("transactionDate"), Sort.Order.desc("createdAt"))))
                     .getContent();
@@ -236,5 +246,18 @@ public class TransactionService {
 
     private String cleanNote(String note) {
         return note == null || note.isBlank() ? null : note.trim();
+    }
+
+    private Page<MoneyTransaction> searchTransactions(Long userId, Long accountId, TransactionType type,
+            String query, LocalDate startDate, LocalDate endDate, org.springframework.data.domain.Pageable pageable) {
+        if (accountId == null) {
+            return transactionRepository.searchByUser(userId, type, query, startDate, endDate, pageable);
+        }
+        if (accountRepository.findByIdAndUserId(accountId, userId).isEmpty()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "Account not found.");
+        }
+        return transactionRepository.searchByUserAndAccount(userId, accountId, type, query,
+                startDate, endDate, pageable);
     }
 }

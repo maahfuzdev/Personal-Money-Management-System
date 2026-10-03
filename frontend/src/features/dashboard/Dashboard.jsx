@@ -142,6 +142,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
   const isConfirmingDeleteRef = useRef(false)
   const [filter, setFilter] = useState('ALL')
+  const [accountFilter, setAccountFilter] = useState('')
   const [searchDraft, setSearchDraft] = useState('')
   const [search, setSearch] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -170,7 +171,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [isSavingGoal, setIsSavingGoal] = useState(false)
   const [analytics, setAnalytics] = useState(null)
   const [categorySuggestions, setCategorySuggestions] = useState({ INCOME: [], EXPENSE: [] })
-  const activeFilterCount = [filter !== 'ALL', Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
+  const activeFilterCount = [filter !== 'ALL', Boolean(accountFilter), Boolean(searchDraft.trim()), Boolean(startDate), Boolean(endDate)].filter(Boolean).length
   const hasInvalidDateRange = Boolean(startDate && endDate && startDate > endDate)
   const budgetWarnings = budgetMonth === currentMonth()
     ? budgets.map((budget) => ({ ...budget, usedPercent: Number(budget.monthlyLimit) > 0 ? Number(budget.spent) / Number(budget.monthlyLimit) * 100 : 0 }))
@@ -184,6 +185,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
         getTransactions(session.token, {
           page: transactionPage,
           size: 10,
+          accountId: accountFilter,
           type: filter === 'ALL' ? undefined : filter,
           search,
           startDate,
@@ -216,7 +218,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     } finally {
       setIsLoading(false)
     }
-  }, [budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
+  }, [accountFilter, budgetMonth, endDate, filter, onSignOut, search, session.token, startDate, transactionPage])
 
   useEffect(() => { loadDashboard() }, [loadDashboard])
 
@@ -282,6 +284,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   function clearTransactionFilters() {
     setFilter('ALL')
+    setAccountFilter('')
     setSearchDraft('')
     setSearch('')
     setStartDate('')
@@ -314,6 +317,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
     setLoadError('')
     try {
       const file = await exportTransactions(session.token, {
+        accountId: accountFilter,
         type: filter === 'ALL' ? undefined : filter,
         search: searchDraft.trim(),
         startDate,
@@ -785,10 +789,15 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 <label className="transaction-search"><span className="sr-only">Search transactions</span>
                   <input type="search" maxLength="100" placeholder="Search category or note" value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} />
                 </label>
-                <label className="filter-label"><span className="sr-only">Filter transactions</span>
+                <label className="filter-label"><span className="sr-only">Filter transaction type</span>
                 <select value={filter} onChange={(event) => changeTransactionFilter(event.target.value)}>
                   <option value="ALL">All activity</option><option value="INCOME">Income</option><option value="EXPENSE">Expenses</option>
                 </select>
+                </label>
+                <label className="filter-label account-filter-label"><span className="sr-only">Filter by account</span>
+                  <select value={accountFilter} onChange={(event) => { setAccountFilter(event.target.value); setTransactionPage(0) }}>
+                    <option value="">All accounts</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  </select>
                 </label>
                 <label className="date-filter"><span>From</span><input type="date" max={endDate || undefined} value={startDate} onChange={(event) => {
                   setStartDate(event.target.value)

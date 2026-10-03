@@ -43,11 +43,12 @@ public class TransactionController {
     public TransactionPageResponse list(@AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,
+            @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @Size(max = 100) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return transactionService.list(jwt.getSubject(), type, search, startDate, endDate, page, size);
+        return transactionService.list(jwt.getSubject(), accountId, type, search, startDate, endDate, page, size);
     }
 
     @GetMapping("/categories")
@@ -58,11 +59,12 @@ public class TransactionController {
 
     @GetMapping(value = "/export.csv", produces = "text/csv")
     public ResponseEntity<byte[]> export(@AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @Size(max = 100) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        byte[] csv = transactionService.exportCsv(jwt.getSubject(), type, search, startDate, endDate);
+        byte[] csv = transactionService.exportCsv(jwt.getSubject(), accountId, type, search, startDate, endDate);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
                 .header(HttpHeaders.CONTENT_DISPOSITION,

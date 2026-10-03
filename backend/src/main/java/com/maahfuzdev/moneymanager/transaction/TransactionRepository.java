@@ -36,6 +36,28 @@ public interface TransactionRepository extends JpaRepository<MoneyTransaction, L
                                         @Param("endDate") LocalDate endDate,
                                         Pageable pageable);
 
+    @Query(value = "select t from MoneyTransaction t where t.user.id = :userId " +
+            "and (:accountId is null or t.account.id = :accountId) " +
+            "and (:type is null or t.type = :type) " +
+            "and (:startDate is null or t.transactionDate >= :startDate) " +
+            "and (:endDate is null or t.transactionDate <= :endDate) " +
+            "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
+            "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ",
+            countQuery = "select count(t) from MoneyTransaction t where t.user.id = :userId " +
+                    "and (:accountId is null or t.account.id = :accountId) " +
+                    "and (:type is null or t.type = :type) " +
+                    "and (:startDate is null or t.transactionDate >= :startDate) " +
+                    "and (:endDate is null or t.transactionDate <= :endDate) " +
+                    "and (:search is null or lower(t.category) like lower(concat('%', :search, '%')) " +
+                    "or lower(coalesce(t.note, '')) like lower(concat('%', :search, '%'))) ")
+    Page<MoneyTransaction> searchByUserAndAccount(@Param("userId") Long userId,
+                                        @Param("accountId") Long accountId,
+                                        @Param("type") TransactionType type,
+                                        @Param("search") String search,
+                                        @Param("startDate") LocalDate startDate,
+                                        @Param("endDate") LocalDate endDate,
+                                        Pageable pageable);
+
     Optional<MoneyTransaction> findByIdAndUserId(Long id, Long userId);
     List<MoneyTransaction> findAllByUserIdOrderByTransactionDateDescCreatedAtDesc(Long userId);
 
