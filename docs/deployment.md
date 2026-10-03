@@ -28,6 +28,8 @@ MySQL is not published on a host port. Flyway applies schema migrations when the
 
 For a public deployment, use a managed MySQL database and deploy the backend and frontend as separate services. Build the backend with `backend/Dockerfile`. Build the frontend with `frontend/Dockerfile` and set `VITE_API_BASE_URL` to the public API base URL **at build time**. Configure these backend variables in the hosting service:
 
+For this Railway deployment, set the frontend build variable `VITE_API_BASE_URL` to `https://personalmoneymanagementjava-production-fb33.up.railway.app/api/v1`. Set the backend variable `APP_CORS_ALLOWED_ORIGIN` to the frontend's exact public origin, `https://personal-money-management-system-production-0260.up.railway.app` (no trailing slash or path). Rebuild/redeploy both services after changing these values.
+
 | Variable | Requirement |
 | --- | --- |
 | `DB_URL` | Managed MySQL JDBC URL, including provider-required TLS options |
