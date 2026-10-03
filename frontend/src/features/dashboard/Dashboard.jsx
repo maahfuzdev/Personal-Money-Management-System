@@ -1097,12 +1097,37 @@ function CashFlowChart({ trend }) {
 
 function CategoryChart({ categories }) {
   if (!categories.length) return <div className="empty-state chart-empty">No expenses recorded for this month.</div>
-  const topCategories = categories.slice(0, 6)
-  const maxAmount = Math.max(...topCategories.map((category) => Number(category.amount)), 1)
-  return <div className="category-chart">{topCategories.map((category, index) => <div className="category-chart-row" key={category.category}>
-    <div className="category-chart-label"><strong>{category.category}</strong><span>{money.format(category.amount)} <i>·</i> {category.sharePercent}%</span></div>
-    <div className="category-track"><span className={`category-fill shade-${index % 4}`} style={{ width: `${Number(category.amount) / maxAmount * 100}%` }} /></div>
-  </div>)}</div>
+  const palette = ['#3975d5', '#45aa8a', '#edaa52', '#d96f78', '#8b75d7', '#95a2b4']
+  const sorted = [...categories].sort((first, second) => Number(second.amount) - Number(first.amount))
+  const topCategories = sorted.slice(0, 5).map((category, index) => ({ ...category, color: palette[index] }))
+  if (sorted.length > 5) {
+    topCategories.push({
+      category: 'Other',
+      amount: sorted.slice(5).reduce((sum, category) => sum + Number(category.amount), 0),
+      color: palette[5],
+    })
+  }
+  const total = topCategories.reduce((sum, category) => sum + Number(category.amount), 0)
+  let accumulatedShare = 0
+  const gradientSegments = topCategories.map((category) => {
+    const start = accumulatedShare
+    accumulatedShare += Number(category.amount) / total * 100
+    return `${category.color} ${start}% ${accumulatedShare}%`
+  })
+  return <div className="category-chart">
+    <div className="category-donut" role="img" aria-label={`Total spending ${money.format(total)} split across ${categories.length} categories`} style={{ background: `conic-gradient(${gradientSegments.join(', ')})` }}>
+      <div className="category-donut-center"><span>Total spending</span><strong>{money.format(total)}</strong></div>
+    </div>
+    <ul className="category-legend">
+      {topCategories.map((category) => {
+        const share = total > 0 ? Number(category.amount) / total * 100 : 0
+        return <li key={category.category}>
+          <span className="category-legend-name"><i style={{ backgroundColor: category.color }} />{category.category}</span>
+          <span className="category-legend-value"><strong>{money.format(category.amount)}</strong><small>{Math.round(share)}%</small></span>
+        </li>
+      })}
+    </ul>
+  </div>
 }
 
 export default Dashboard
