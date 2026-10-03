@@ -70,6 +70,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [successMessage, setSuccessMessage] = useState('')
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isTransactionFormOpen, setIsTransactionFormOpen] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -303,6 +304,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   }
 
   function startEdit(transaction) {
+    setIsTransactionFormOpen(true)
     setEditingId(transaction.id)
     setForm({
       type: transaction.type,
@@ -337,6 +339,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       }))
       setSuccessMessage(wasEditing ? 'Transaction updated.' : 'Transaction added.')
       cancelEdit()
+      setIsTransactionFormOpen(false)
       await loadDashboard()
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -694,8 +697,14 @@ function Dashboard({ session, onSignOut, navigate, path }) {
           </section>
 
           <section className="panel form-panel" aria-labelledby="form-heading">
-            <div className="panel-heading"><div><p className="eyebrow">KEEP TRACK</p><h2 id="form-heading">{editingId ? 'Edit transaction' : 'Add a transaction'}</h2></div></div>
-            <form id="transaction-form" className="transaction-form" onSubmit={handleSubmit}>
+            <div className="panel-heading">
+              <div><p className="eyebrow">KEEP TRACK</p><h2 id="form-heading">{editingId ? 'Edit transaction' : 'Add a transaction'}</h2></div>
+              <button className="transaction-form-toggle" type="button" aria-expanded={isTransactionFormOpen} aria-controls={isTransactionFormOpen ? 'transaction-form' : undefined} onClick={() => {
+                if (isTransactionFormOpen && editingId) cancelEdit()
+                setIsTransactionFormOpen((open) => !open)
+              }}>{isTransactionFormOpen ? 'Close' : 'Add transaction'}</button>
+            </div>
+            {isTransactionFormOpen && <form id="transaction-form" className="transaction-form" onSubmit={handleSubmit}>
               <div className="type-switch" role="group" aria-label="Transaction type">
                 <button type="button" className={form.type === 'EXPENSE' ? 'type-option selected expense' : 'type-option'} onClick={() => setForm({ ...form, type: 'EXPENSE' })}>Expense</button>
                 <button type="button" className={form.type === 'INCOME' ? 'type-option selected income' : 'type-option'} onClick={() => setForm({ ...form, type: 'INCOME' })}>Income</button>
@@ -715,7 +724,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               </label>
               <button className="submit-button" type="submit" disabled={isSaving}>{isSaving ? 'Saving…' : editingId ? 'Save changes' : 'Add transaction'}<span aria-hidden="true">→</span></button>
               {editingId && <button className="cancel-edit" type="button" onClick={cancelEdit}>Cancel editing</button>}
-            </form>
+            </form>}
           </section>
         </div>}
 
