@@ -96,13 +96,6 @@ function AuthScreen({ onAuthenticated }) {
         </button>
       </div>
 
-      <div className="google-auth-area">
-        {googleClientId
-          ? <div className="google-button" ref={googleButton} />
-          : <button className="google-button google-unconfigured" type="button" disabled>Continue with Google <span>Set VITE_GOOGLE_CLIENT_ID to enable</span></button>}
-        <div className="auth-divider"><span>or continue with email</span></div>
-      </div>
-
       <form
         id="auth-form-panel"
         className="auth-form"
@@ -163,6 +156,13 @@ function AuthScreen({ onAuthenticated }) {
           {!isSubmitting && <span aria-hidden="true">→</span>}
         </button>
       </form>
+
+      <div className="google-auth-area">
+        <div className="auth-divider"><span>or {isRegistering ? 'create an account' : 'continue'} with</span></div>
+        {googleClientId
+          ? <div className="google-button" ref={googleButton} />
+          : <button className="google-button google-unconfigured" type="button" disabled>Continue with Google <span>Google sign-in is not configured yet</span></button>}
+      </div>
 
       <p className="auth-privacy">
         Stay signed in on this device for up to 30 days. Sign out to end your session here.
