@@ -172,6 +172,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
   const [budgets, setBudgets] = useState([])
   const [currentBudgets, setCurrentBudgets] = useState([])
   const [budgetForm, setBudgetForm] = useState(emptyBudget)
+  const [isBudgetFormVisible, setIsBudgetFormVisible] = useState(true)
   const [budgetMonth, setBudgetMonth] = useState(currentMonth())
   const [editingBudgetId, setEditingBudgetId] = useState(null)
   const [budgetError, setBudgetError] = useState('')
@@ -653,6 +654,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
   function startBudgetEdit(budget) {
     setEditingBudgetId(budget.id)
+    setIsBudgetFormVisible(true)
     setBudgetForm({ category: budget.category, monthlyLimit: String(budget.monthlyLimit), month: budget.month })
     setBudgetError('')
     document.querySelector('#budget-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -688,6 +690,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
       setBudgetMonth(payload.month)
       setEditingBudgetId(null)
       setBudgetForm({ ...emptyBudget(), month: payload.month })
+      setIsBudgetFormVisible(false)
       await loadDashboard(payload.month)
     } catch (error) {
       if (error.status === 401) onSignOut()
@@ -1139,9 +1142,12 @@ function Dashboard({ session, onSignOut, navigate, path }) {
 
         {route === '/budgets' && <section className="panel budgets-panel page-panel" aria-labelledby="budgets-heading">
           <div className="panel-heading budget-heading"><div><p className="eyebrow">PLAN AHEAD</p><h2 id="budgets-heading">Monthly budgets</h2></div>
-            <label className="budget-month-label"><span className="sr-only">Choose budget month</span>
-              <input type="month" value={budgetMonth} disabled={Boolean(editingBudgetId)} onChange={(event) => changeBudgetMonth(event.target.value)} />
-            </label>
+            <div className="budget-heading-actions">
+              <label className="budget-month-label"><span className="sr-only">Choose budget month</span>
+                <input type="month" value={budgetMonth} disabled={Boolean(editingBudgetId)} onChange={(event) => changeBudgetMonth(event.target.value)} />
+              </label>
+              {!isBudgetFormVisible && <button className="export-button" type="button" onClick={() => setIsBudgetFormVisible(true)}>Set a budget</button>}
+            </div>
           </div>
           {!isLoading && selectedBudgetWarnings.length > 0 && <div className={`budget-alerts ${selectedBudgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'over-limit' : ''}`} role="status" aria-live="polite">
             <strong>{selectedBudgetWarnings.some((budget) => budget.usedPercent >= 100) ? 'Budget limit reached' : 'Budget heads-up'}</strong>
@@ -1153,7 +1159,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
                 : budgets.length === 0 ? <div className="empty-state compact"><strong>No budgets for this month yet</strong><span>Set a limit and keep an eye on your spending.</span></div>
                   : budgets.map((budget) => <BudgetRow key={budget.id} budget={budget} isCurrentMonth={budgetMonth === currentMonth()} onEdit={() => startBudgetEdit(budget)} onDelete={() => requestDelete('budget', budget)} />)}
             </div>
-            <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
+            {isBudgetFormVisible && <form id="budget-form" className="budget-form" onSubmit={handleBudgetSubmit}>
               <h3>{editingBudgetId ? 'Edit budget' : 'Set a category limit'}</h3>
               {budgetError && <div className="form-alert" role="alert">{budgetError}</div>}
               <label className="form-field"><span>Category</span><input required list="category-suggestions-EXPENSE" maxLength="60" placeholder="e.g. Food" value={budgetForm.category} onChange={(event) => setBudgetForm({ ...budgetForm, category: event.target.value })} /></label>
@@ -1161,7 +1167,7 @@ function Dashboard({ session, onSignOut, navigate, path }) {
               <label className="form-field"><span>Month</span><input required type="month" value={budgetForm.month} onChange={(event) => setBudgetForm({ ...budgetForm, month: event.target.value })} /></label>
               <button className="submit-button" type="submit" disabled={isSavingBudget}>{isSavingBudget ? 'Saving…' : editingBudgetId ? 'Save budget' : 'Create budget'}<span aria-hidden="true">→</span></button>
               {editingBudgetId && <button className="cancel-edit" type="button" onClick={cancelBudgetEdit}>Cancel editing</button>}
-            </form>
+            </form>}
           </div>
         </section>}
 
